@@ -19,9 +19,10 @@ function generateHeaders() {
 }
 
 function sendRequest(url, proxy) {
-    const proxyHost = proxy.split(':')[0];
-    const proxyPort = proxy.split(':')[1];
     if (Math.random() > 0.5) {
+        // HTTP/1.1 through proxy
+        const proxyHost = proxy.split(':')[0];
+        const proxyPort = proxy.split(':')[1];
         const options = {
             hostname: proxyHost,
             port: proxyPort,
@@ -34,14 +35,31 @@ function sendRequest(url, proxy) {
         req.on('error', () => {});
         req.end();
     } else {
-        const client = http2.connect(url);
-        const req = client.request(generateHeaders());
-        req.on('error', () => {});
-        req.end();
-        client.close();
-    }
+        // HTTP/2 direct request
+        try {
+            const parsedUrl = new URL(url);
+            const client = http2.connect(parsedUrl.origin);
+            
+            // Create headers without HTTP/1 specific fields
+            const headers = { ...generateHeaders() };
+            delete headers.Connection; // Remove Connection header for HTTP/2
 
-    crypto.createHash('sha256').update(url).digest('hex');
+            // Set required HTTP/2 pseudo-headers
+            headers[':path'] = parsedUrl.pathname + parsedUrl.search;
+            headers[':method'] = 'GET';
+            headers[':authority'] = parsedUrl.host;
+
+            const req = client.request(headers);
+            req.on('error', () => {});
+            req.end();
+            
+            // Close client after request
+            req.on('end', () => client.close());
+            req.on('error', () => client.close());
+        } catch (e) {
+            // Invalid URL or connection error
+        }
+    }
 }
 
 async function main(url, duration) {
@@ -57,7 +75,7 @@ async function main(url, duration) {
 }
 
 if (process.argv.length !== 4) {
-    console.log('Usage: node z.js <url> <time>');
+    console.log('Usage: node http.js <url> <time>');
     process.exit(1);
 }
 
