@@ -1,7 +1,7 @@
 import aiohttp, asyncio
 from re import compile
 
-TIMEOUT: int = 5
+TIMEOUT: int = 20
 user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36"
 REGEX = compile(
     r"(?:^|\D)?(("+ r"(?:[1-9]|[1-9]\d|1\d{2}|2[0-4]\d|25[0-5])"
@@ -51,3 +51,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
