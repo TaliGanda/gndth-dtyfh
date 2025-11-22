@@ -844,7 +844,7 @@ def run_server():
     uvicorn.run(
         app,
         host='0.0.0.0',
-        port=port,
+        port=80,
         workers=1,
         loop='asyncio',
         http='httptools',
