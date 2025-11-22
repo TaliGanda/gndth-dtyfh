@@ -811,7 +811,7 @@ def create_self_signed_cert():
 
 # ========== ENHANCED SERVER CONFIGURATION ==========
 def run_server():
-    """Run optimized server with Uvicorn - HTTPS on port 443"""
+    """Run optimized server with Uvicorn - HTTPS on port 8443"""
     
     # Create self-signed certificates if they don't exist
     ssl_certfile, ssl_keyfile = create_self_signed_cert()
@@ -823,8 +823,9 @@ def run_server():
         ssl_certfile = None
         ssl_keyfile = None
     
+    # Gunakan port tinggi yang tidak memerlukan root
     protocol = "https" if ssl_certfile else "http"
-    port = 443 if ssl_certfile else 80
+    port = 8443 if ssl_certfile else 8080  # Changed from 443/80 to 8443/8080
     
     print(f"🚀 Advanced DStat Server starting on {protocol}://0.0.0.0:{port}")
     print(f"📊 Dashboard: {protocol}://localhost:{port}")
@@ -844,7 +845,7 @@ def run_server():
     uvicorn.run(
         app,
         host='0.0.0.0',
-        port=80,
+        port=port,  # Use the port variable, not hardcoded 80
         workers=1,
         loop='asyncio',
         http='httptools',
