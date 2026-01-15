@@ -299,7 +299,6 @@ func checkProxy(proxy string) *ProxyInfo {
 	// Dapatkan info IP dan periksa blacklist sebelum melanjutkan
 	ipInfo := getIPInfo(ipResponse.Origin)
 	if isBlacklisted(ipInfo) {
-			proxy, ipInfo.ISP, ipInfo.Org, ipInfo.ASN)
 		return nil
 	}
 
