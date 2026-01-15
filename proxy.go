@@ -243,7 +243,6 @@ func worker(proxyQueue <-chan string, workerID int) {
 				result.Anonymity, httpsStatus, googleStatus)
 			mutex.Unlock()
 		} else {
-			fmt.Printf("[W%02d] ❌ %s | Failed\n", workerID, proxy)
 		}
 	}
 }
@@ -267,14 +266,14 @@ func checkProxy(proxy string) *ProxyInfo {
 	transport := &http.Transport{
 		Proxy: http.ProxyURL(proxyURL),
 		DialContext: (&net.Dialer{
-			Timeout: 10 * time.Second,
+			Timeout: 3 * time.Second,
 		}).DialContext,
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
 	client := &http.Client{
 		Transport: transport,
-		Timeout:   20 * time.Second,
+		Timeout:   3 * time.Second,
 	}
 
 	resp, err := client.Get("http://httpbin.org/ip")
@@ -300,7 +299,6 @@ func checkProxy(proxy string) *ProxyInfo {
 	// Dapatkan info IP dan periksa blacklist sebelum melanjutkan
 	ipInfo := getIPInfo(ipResponse.Origin)
 	if isBlacklisted(ipInfo) {
-		fmt.Printf("🚫 BLOCKED: %s | ISP: %s | Org: %s | ASN: %s\n", 
 			proxy, ipInfo.ISP, ipInfo.Org, ipInfo.ASN)
 		return nil
 	}
