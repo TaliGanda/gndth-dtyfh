@@ -37,7 +37,7 @@ def check_proxies():
             valid_proxies.append(proxy)
 
 # Use a fixed number of threads
-num_threads = 100
+num_threads = 10
 
 # Start threads for proxy validation
 threads = []
