@@ -243,6 +243,7 @@ func worker(proxyQueue <-chan string, workerID int) {
 				result.Anonymity, httpsStatus, googleStatus)
 			mutex.Unlock()
 		} else {
+			fmt.Printf("[W%02d] ❌ %s | Failed\n", workerID, proxy)
 		}
 	}
 }
