@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html> 
+<head>
+    <title>Hacked By Unknown</title>
+    <meta name="create by" content="Wish">
+    <meta name="Wish" content="wish">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style> 
+        html, body { 
+            color: #FFFFFF; 
+            font-family: 'Fredericka the Great', sans-serif; 
+            font-weight: 100; 
+            height: 100vh; 
+            margin: 0;
+            text-align: center;
+            overflow: hidden;
+        } 
+        .title { 
+            font-size: 36px; 
+            padding: 20px; 
+        }
+        .wish { 
+            margin-top: 20px;
+            font-size: 26px;
+        }
+        #displayText {
+            margin-top: 20px;
+        }
+
+        .glitch {
+            width: 300px;
+            height: 340px;
+            background: url('https://i.ibb.co.com/9W79MbD/11.jpg');
+            background-size: cover;
+            margin: auto;
+            margin-top: 66px;
+            animation: glitch 4.5s infinite steps(1);
+        }
+        
+        @keyframes glitch {
+            0%, 100% {
+                background: url('https://i.ibb.co.com/9W79MbD/11.jpg');
+                height: 300px;
+                width: 300px;
+                background-size:cover;      
+            }
+        
+            92.5% {
+                background: url('https://i.ibb.co.com/j9t1XyR/3.png');
+                background-size: cover; 
+                height: 300px;
+                width: 300px;
+                opacity: 1;     
+            }
+        
+            95% {
+                background: url('https://i.ibb.co.com/j9t1XyR/3.png');
+                background-size: cover;
+                height: 300px;
+                width: 300px;
+                opacity: 0;
+            }
+        
+            97.5% {
+                background: url('https://i.ibb.co.com/1ZTQvCP/4.png');
+                background-size: cover; 
+                height: 300px;
+                width: 300px;  
+                opacity: 100;        
+            }
+        }
+    </style>
+</head> 
+<body bgcolor="black" text="white" oncontextmenu="return false;" onkeydown="return false;" id="body">
+    <div style="text-align: center; height: 200px; margin-top: 66px;">
+        <!-- Logo -->
+        <div class="glitch"></div>
+        <div class="wish">
+            <b><code>- <font color=red>Unknown</font> <font color=white>-</font></code></b>
+        </div>
+        <div id="displayText">
+        </div>
+    </div>
+    <script>
+        const textArray = [
+          "<b><font color=white>If you win, you live. If you lose, you die. If you don’t fight, you can’t win </font><br><br><font color=red>[-] Phantom Troupe | MSHELL DEVIL [-]</font></b>"
+        ];
+        let index = 0, textPos = 0, contents = '', currentTag = '', insideTag = false;
+        function typeText() {
+          if (index < textArray.length) {
+            let char = textArray[index].charAt(textPos);
+            contents += char;
+            if (char === '|') insideTag = true;
+            if (char === '|') {
+                insideTag = false;
+                currentTag = '';
+            }
+            if (insideTag) {
+                currentTag += char;
+            }
+            if (!insideTag) {
+                document.getElementById('displayText').innerHTML = contents + '|';
+            }
+            textPos++;
+            if (textPos === textArray[index].length) {
+              textPos = 0; 
+              index++;
+              contents = '';
+            }
+            setTimeout(typeText, 40);
+          } else {
+            document.getElementById('displayText').innerHTML = textArray.join('');
+          }
+        }
+        typeText();
+    </script>
+</body> 
+</html>
