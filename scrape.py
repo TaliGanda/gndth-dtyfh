@@ -4,12 +4,12 @@ import aiofiles
 import time
 
 sources = [
-    "https://tools.elitestress.st/api/proxy?license=6926846d98e30682e8b48c75c5516a56&type=socks4&geo=ALL",
-    "https://tools.elitestress.st/api/proxy?license=6926846d98e30682e8b48c75c5516a56&type=http&geo=ALL",
-    "https://tools.elitestress.st/api/proxy?license=6926846d98e30682e8b48c75c5516a56&type=socks5&geo=ALL",
-    "https://tools.elitestress.st/api/proxy?license=6926846d98e30682e8b48c75c5516a56&type=socks4&geo=ID",
-    "https://tools.elitestress.st/api/proxy?license=6926846d98e30682e8b48c75c5516a56&type=http&geo=ID",
-    "https://tools.elitestress.st/api/proxy?license=6926846d98e30682e8b48c75c5516a56&type=socks5&geo=ID",
+    "https://tools.elitestress.st/api/proxy?license=86f80427944dc8b7ca630ec3e3feed94&type=socks4&geo=ALL",
+    "https://tools.elitestress.st/api/proxy?license=86f80427944dc8b7ca630ec3e3feed94&type=http&geo=ALL",
+    "https://tools.elitestress.st/api/proxy?license=86f80427944dc8b7ca630ec3e3feed94&type=socks5&geo=ALL",
+    "https://tools.elitestress.st/api/proxy?license=86f80427944dc8b7ca630ec3e3feed94&type=socks4&geo=ID",
+    "https://tools.elitestress.st/api/proxy?license=86f80427944dc8b7ca630ec3e3feed94&type=http&geo=ID",
+    "https://tools.elitestress.st/api/proxy?license=86f80427944dc8b7ca630ec3e3feed94&type=socks5&geo=ID",
     "https://proxyspace.pro/http.txt",
     "https://proxyspace.pro/https.txt",
     "https://proxyspace.pro/socks4.txt",
