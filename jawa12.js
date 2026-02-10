@@ -1,3 +1,4 @@
+const fs = require('fs');
 const cluster = require('cluster');
 const url = require('url');
 const net = require('net');
