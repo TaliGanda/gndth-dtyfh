@@ -1,36 +1,24 @@
 import argparse
-import json
 import ipaddress
 import sys
 
 def load_blacklist(blacklist_file):
-    """Load CIDR from AWS ip-ranges.json file."""
+    """Load CIDR from a plain text file (one CIDR per line)."""
     networks = []
     try:
         with open(blacklist_file, 'r') as f:
-            data = json.load(f)
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    # Skip empty lines and comments
+                    continue
+                try:
+                    networks.append(ipaddress.ip_network(line))
+                except ValueError as e:
+                    print(f"Warning: invalid CIDR at line {line_num}: {line} ({e})", file=sys.stderr)
     except Exception as e:
         print(f"Error loading blacklist file: {e}", file=sys.stderr)
         sys.exit(1)
-
-    # IPv4 prefixes
-    for item in data.get('prefixes', []):
-        cidr = item.get('ip_prefix')
-        if cidr:
-            try:
-                networks.append(ipaddress.ip_network(cidr))
-            except ValueError:
-                print(f"Warning: invalid IPv4 CIDR {cidr}", file=sys.stderr)
-
-    # IPv6 prefixes
-    for item in data.get('ipv6_prefixes', []):
-        cidr = item.get('ipv6_prefix')
-        if cidr:
-            try:
-                networks.append(ipaddress.ip_network(cidr))
-            except ValueError:
-                print(f"Warning: invalid IPv6 CIDR {cidr}", file=sys.stderr)
-
     return networks
 
 def is_blacklisted(ip_str, networks):
@@ -38,7 +26,6 @@ def is_blacklisted(ip_str, networks):
     try:
         ip = ipaddress.ip_address(ip_str)
     except ValueError:
-        # Invalid IP format, treat as not blacklisted (or you can skip)
         return False
     for net in networks:
         if ip in net:
@@ -53,21 +40,19 @@ def filter_proxy_file(input_file, blacklist_file, output_file):
             line = line.strip()
             if not line:
                 continue
-            # Split by ':' to get IP part (assuming format ip:port)
             parts = line.split(':')
             if len(parts) < 2:
                 print(f"Warning: line {line_num} does not contain IP:PORT format, skipped: {line}", file=sys.stderr)
                 continue
             ip_str = parts[0].strip()
             if is_blacklisted(ip_str, networks):
-                # Blacklisted, skip
                 continue
             fout.write(line + '\n')
 
 def main():
     parser = argparse.ArgumentParser(description='Filter proxy list by IP blacklist CIDR.')
     parser.add_argument('-i', '--input', required=True, help='Input file with IP:PORT per line')
-    parser.add_argument('-b', '--blacklist', required=True, help='Blacklist JSON file (ip-ranges.json format)')
+    parser.add_argument('-b', '--blacklist', required=True, help='Blacklist file with one CIDR per line')
     parser.add_argument('-o', '--output', required=True, help='Output file for filtered proxies')
     args = parser.parse_args()
 
