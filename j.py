@@ -1,63 +1,120 @@
-import argparse
+import subprocess
+import re
 import ipaddress
 import sys
 
-def load_blacklist(blacklist_file):
-    """Load CIDR from a plain text file (one CIDR per line)."""
-    networks = []
+# regex untuk menangkap IPv4/IPv6 CIDR di teks
+CIDR_RE_IPV4 = re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}\b')
+CIDR_RE_IPV6 = re.compile(r'\b[0-9a-fA-F:]+/\d{1,3}\b')
+
+def extract_cidrs(text):
+    """Ambil semua substring yang cocok CIDR dan validasikan dengan ipaddress."""
+    out = set()
+    for m in CIDR_RE_IPV4.finditer(text):
+        s = m.group(0)
+        try:
+            n = ipaddress.ip_network(s, strict=False)
+            if n.version == 4:
+                out.add(str(n))
+        except Exception:
+            pass
+    for m in CIDR_RE_IPV6.finditer(text):
+        s = m.group(0)
+        try:
+            n = ipaddress.ip_network(s, strict=False)
+            if n.version == 6:
+                out.add(str(n))
+        except Exception:
+            pass
+    return out
+
+def run_bgpq4(asn, ipv4=True, ipv6=False):
+    """
+    Panggil bgpq4 dan kembalikan set CIDR (strings).
+    Default: ipv4 only (meniru skrip lama). Aktifkan ipv6 jika perlu.
+    """
+    cmd = ["bgpq4"]
+    if ipv4 and not ipv6:
+        cmd += ["-4"]
+    elif ipv6 and not ipv4:
+        cmd += ["-6"]
+    # kalau mau keduanya, jalankan dua kali (lebih aman)
+    cmd.append(asn)
+
     try:
-        with open(blacklist_file, 'r') as f:
-            for line_num, line in enumerate(f, 1):
-                line = line.strip()
-                if not line or line.startswith('#'):
-                    # Skip empty lines and comments
-                    continue
-                try:
-                    networks.append(ipaddress.ip_network(line))
-                except ValueError as e:
-                    print(f"Warning: invalid CIDR at line {line_num}: {line} ({e})", file=sys.stderr)
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        txt = proc.stdout + "\n" + proc.stderr
+        return extract_cidrs(txt)
+    except FileNotFoundError:
+        print("Error: bgpq4 tidak ditemukan. Install bgpq4 dulu.", file=sys.stderr)
+        return set()
     except Exception as e:
-        print(f"Error loading blacklist file: {e}", file=sys.stderr)
-        sys.exit(1)
-    return networks
+        print("Error menjalankan bgpq4:", e, file=sys.stderr)
+        return set()
 
-def is_blacklisted(ip_str, networks):
-    """Check if IP is in any of the networks."""
+def save_list(sorted_prefixes, filename):
+    with open(filename, "w", encoding="utf-8") as f:
+        for p in sorted_prefixes:
+            f.write(p + "\n")
+
+def sort_prefixes(prefixes):
+    def keyfn(p):
+        n = ipaddress.ip_network(p, strict=False)
+        return (n.version, int(n.network_address), n.prefixlen)
+    return sorted(prefixes, key=keyfn)
+
+def single_asn():
+    asn = input("Masukkan ASN (contoh AS13335): ").strip()
+    if not asn:
+        print("ASN kosong.")
+        return
+    out = input("Nama file output (contoh result.txt): ").strip() or "result.txt"
+    # ambil IPv4 & IPv6? default hanya IPv4, tapi bisa ubah di sini jika mau
+    prefixes = run_bgpq4(asn, ipv4=True, ipv6=False)
+    final = sort_prefixes(prefixes)
+    save_list(final, out)
+    print(f"Saved {len(final)} prefixes to {out}")
+
+def multi_asn():
+    infile = input("Masukkan file list ASN (satu ASN per baris): ").strip()
+    if not infile:
+        print("File ASN tidak diberikan.")
+        return
+    out = input("Nama file output: ").strip() or "result.txt"
+    allp = set()
     try:
-        ip = ipaddress.ip_address(ip_str)
-    except ValueError:
-        return False
-    for net in networks:
-        if ip in net:
-            return True
-    return False
+        with open(infile, encoding="utf-8") as f:
+            for ln in f:
+                asn = ln.strip()
+                if not asn:
+                    continue
+                print(f"Fetching {asn} ...")
+                p = run_bgpq4(asn, ipv4=True, ipv6=False)
+                allp.update(p)
+    except FileNotFoundError:
+        print("File ASN tidak ditemukan.")
+        return
 
-def filter_proxy_file(input_file, blacklist_file, output_file):
-    networks = load_blacklist(blacklist_file)
+    final = sort_prefixes(allp)
+    save_list(final, out)
+    print(f"Saved {len(final)} prefixes to {out}")
 
-    with open(input_file, 'r') as fin, open(output_file, 'w') as fout:
-        for line_num, line in enumerate(fin, 1):
-            line = line.strip()
-            if not line:
-                continue
-            parts = line.split(':')
-            if len(parts) < 2:
-                print(f"Warning: line {line_num} does not contain IP:PORT format, skipped: {line}", file=sys.stderr)
-                continue
-            ip_str = parts[0].strip()
-            if is_blacklisted(ip_str, networks):
-                continue
-            fout.write(line + '\n')
+def menu():
+    while True:
+        print("\n=== ASN TO CIDR TOOL ===")
+        print("1. Single ASN")
+        print("2. Multi ASN")
+        print("3. Exit")
+        pilih = input("Pilih menu: ").strip()
+        if pilih == "1":
+            single_asn()
+        elif pilih == "2":
+            multi_asn()
+        elif pilih == "3":
+            print("Keluar...")
+            break
+        else:
+            print("Pilihan tidak valid")
 
-def main():
-    parser = argparse.ArgumentParser(description='Filter proxy list by IP blacklist CIDR.')
-    parser.add_argument('-i', '--input', required=True, help='Input file with IP:PORT per line')
-    parser.add_argument('-b', '--blacklist', required=True, help='Blacklist file with one CIDR per line')
-    parser.add_argument('-o', '--output', required=True, help='Output file for filtered proxies')
-    args = parser.parse_args()
-
-    filter_proxy_file(args.input, args.blacklist, args.output)
-    print(f"Filtering complete. Output written to {args.output}")
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    menu()
