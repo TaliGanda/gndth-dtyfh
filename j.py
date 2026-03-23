@@ -1,14 +1,14 @@
+#Tools By TaliGanda
+
 import subprocess
 import re
 import ipaddress
 import sys
 
-# regex untuk menangkap IPv4/IPv6 CIDR di teks
 CIDR_RE_IPV4 = re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}\b')
 CIDR_RE_IPV6 = re.compile(r'\b[0-9a-fA-F:]+/\d{1,3}\b')
 
 def extract_cidrs(text):
-    """Ambil semua substring yang cocok CIDR dan validasikan dengan ipaddress."""
     out = set()
     for m in CIDR_RE_IPV4.finditer(text):
         s = m.group(0)
@@ -29,16 +29,11 @@ def extract_cidrs(text):
     return out
 
 def run_bgpq4(asn, ipv4=True, ipv6=False):
-    """
-    Panggil bgpq4 dan kembalikan set CIDR (strings).
-    Default: ipv4 only (meniru skrip lama). Aktifkan ipv6 jika perlu.
-    """
     cmd = ["bgpq4"]
     if ipv4 and not ipv6:
         cmd += ["-4"]
     elif ipv6 and not ipv4:
         cmd += ["-6"]
-    # kalau mau keduanya, jalankan dua kali (lebih aman)
     cmd.append(asn)
 
     try:
@@ -69,7 +64,6 @@ def single_asn():
         print("ASN kosong.")
         return
     out = input("Nama file output (contoh result.txt): ").strip() or "result.txt"
-    # ambil IPv4 & IPv6? default hanya IPv4, tapi bisa ubah di sini jika mau
     prefixes = run_bgpq4(asn, ipv4=True, ipv6=False)
     final = sort_prefixes(prefixes)
     save_list(final, out)
