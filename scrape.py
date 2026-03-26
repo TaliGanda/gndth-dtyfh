@@ -4,15 +4,6 @@ import aiofiles
 import time
 
 sources = [
-    "https://tools.elitestress.st/api/proxy?license=86f80427944dc8b7ca630ec3e3feed94&type=socks4&geo=ALL",
-    "https://tools.elitestress.st/api/proxy?license=86f80427944dc8b7ca630ec3e3feed94&type=http&geo=ALL",
-    "https://tools.elitestress.st/api/proxy?license=86f80427944dc8b7ca630ec3e3feed94&type=socks5&geo=ALL",
-    "https://tools.elitestress.st/api/proxy?license=86f80427944dc8b7ca630ec3e3feed94&type=socks4&geo=ID",
-    "https://tools.elitestress.st/api/proxy?license=86f80427944dc8b7ca630ec3e3feed94&type=socks4&geo=ID",
-    "https://tools.elitestress.st/api/proxy?license=86f80427944dc8b7ca630ec3e3feed94&type=http&geo=ID",
-    "https://tools.elitestress.st/api/proxy?license=86f80427944dc8b7ca630ec3e3feed94&type=socks5&geo=US",
-    "https://tools.elitestress.st/api/proxy?license=86f80427944dc8b7ca630ec3e3feed94&type=http&geo=US",
-    "https://tools.elitestress.st/api/proxy?license=86f80427944dc8b7ca630ec3e3feed94&type=socks5&geo=US",
     "https://proxyspace.pro/http.txt",
     "https://proxyspace.pro/https.txt",
     "https://proxyspace.pro/socks4.txt",
