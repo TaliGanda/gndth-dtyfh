@@ -12,7 +12,7 @@ sources = [
     "https://openproxylist.xyz/https.txt",
     "https://openproxylist.xyz/socks4.txt",
     "https://openproxylist.xyz/socks5.txt",
-    "http://103.59.160.251:8080/api/export?license=dbc4353d4e068995ffb1061b7164d889cdc586998a3349f7&type=all"
+    "https://proxy.lost4apistresser.com/api/export?license=dbc4353d4e068995ffb1061b7164d889cdc586998a3349f7&type=all"
 ]
 
 MAX_CONCURRENT_REQUESTS = 200
