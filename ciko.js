@@ -226,7 +226,7 @@ const cplist = [
 
 var cipper = cplist[Math.floor(Math.floor(Math.random() * cplist.length))];
 var proxies = readLines(args.proxyFile);
-const parsedTarget = url.parse(args.target);
+const parsedTarget = new URL(args.target);
 
 
 const headerBuilder = {
