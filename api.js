@@ -48,7 +48,7 @@ app.get('/attack', async (req, res) => {
 
   const validGeo = ['ALL', 'ID', 'US'];
   const geoUpper = geo ? geo.toUpperCase() : 'ALL';
-  const proxyFile = validGeo.includes(geoUpper) ? `${geoUpper.toLowerCase()}.txt` : 'proxy.txt';
+  const proxyFile = validGeo.includes(geoUpper) ? `${geoUpper.toLowerCase()}.txt` : 'valid_http.txt';
 
   const concurrentsNum = Math.max(1, parseInt(concurrents || '1', 10) || 1);
   const totalAttackTime = Math.max(1, parseInt(time || '10', 10) || 10);
