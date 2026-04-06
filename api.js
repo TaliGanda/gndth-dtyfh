@@ -67,7 +67,7 @@ app.get('/attack', async (req, res) => {
 
   try {
     const proc = spawn(executor, [script, ...finalArgs], {
-      cwd: '/root/methods',
+      cwd: '/root/y',
       stdio: 'ignore',
       detached: true
     });
