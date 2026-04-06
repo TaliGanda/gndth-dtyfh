@@ -64,7 +64,7 @@
      threads: ~~process.argv[5]
  }
  
- const parsedTarget = url.parse(args.target);
+ const parsedTarget = new URL(args.target);
 
 const MAX_RAM_PERCENTAGE = 80;
 const RESTART_DELAY = 1000;
