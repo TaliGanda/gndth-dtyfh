@@ -1,0 +1,10 @@
+{
+  "RannGantengAbissss": {
+    "powersaving": false,
+    "maxAttackTime": 3600,
+    "maxConcurrentAttacks": 20,
+    "expire": "2999/10/21 20:30",
+    "blacklistbypass": true,
+    "Vip access": true
+  }
+}
