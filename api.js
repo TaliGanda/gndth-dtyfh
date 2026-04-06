@@ -5,7 +5,7 @@ const app = express();
 const PORT = 3333;
 
 const methodMap = {
-    "H2-STORM": {
+  "H2-STORM": {
     script: "ciko.js",
     executor: "node",
     argsTemplate: ["<url>", "<time>", "8", "<concurrents>", "<proxy>"]
@@ -13,9 +13,9 @@ const methodMap = {
   "H2-ENVY": {
     script: "jawa14.js",
     executor: "node",
-    argsTemplate: ["<url>", "<time>", "8", "<concurrents>", "<proxy>", "--bypass", "--googlebot", "--referer", "--secua"]
+    argsTemplate: ["GET", "<url>", "<time>", "<concurrents>", "24", "<proxy>", "--bypass", "--googlebot", "--referer", "--secua"]
   },
-    "H2-FLOOD": {
+  "H2-FLOOD": {
     script: "flood.js",
     executor: "node",
     argsTemplate: ["<url>", "<time>", "8", "<concurrents>", "<proxy>"]
@@ -23,7 +23,7 @@ const methodMap = {
   "H2-PID": {
     script: "gjqu4.js",
     executor: "node",
-    argsTemplate: ["<url>", "<time>", "8", "<concurrents>", "<proxy>"]
+    argsTemplate: ["GET", "<url>", "<time>", "<concurrents>", "24", "<proxy>"]
   }
 };
 
