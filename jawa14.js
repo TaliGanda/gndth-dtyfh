@@ -84,7 +84,7 @@ if (!method || !target || !time || !threads || !ratelimit || !proxyFile) {
     process.exit(1);
 }
 
-const parsedTarget = url.parse(target);
+const parsedTarget = new URL(target);
 const isHttps = parsedTarget.protocol === 'https:';
 const targetPort = parsedTarget.port || (isHttps ? 443 : 80);
 
