@@ -105,21 +105,20 @@ var (
 	wg           sync.WaitGroup
 	realIP       string
 
-	// Daftar blacklist untuk ISP, organisasi, dan ASN yang diblokir
+	// Hanya blacklist Amazon / AWS
 	blacklistedISPs = []string{
-		"amazon", "aws", "amazon technologies", "amazon.com",
-		"amazon data services", "amazon web services", "ec2",
-		"google cloud", "gcp", "google llc", "microsoft", "azure",
-		"digitalocean", "linode", "vultr", "ovh", "alibaba", "oracle cloud",
-		"hetzner", "rackspace", "godaddy", "bluehost", "hostgator", "siteground",
-		"dreamhost", "ionos", "1and1", "cloudflare", "akamai", "fastly",
-		"incapsula", "imperva", "sucuri", "stackpath", "keycdn", "bunnycdn",
+		"amazon",
+		"aws",
+		"amazon technologies",
+		"amazon.com",
+		"amazon data services",
+		"amazon web services",
+		"ec2",
 	}
 
 	blacklistedASNs = []string{
-		"as16509", "as14618", "as15169", "as8075", "as32934", "as14061",
-		"as16276", "as396982", "as13335", "as20940", "as7497", "as714",
-		"as7922", "as54574", "as12876", "as20473", "as30633", "as14061",
+		"as16509",
+		"as14618",
 	}
 )
 
