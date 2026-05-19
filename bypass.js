@@ -198,7 +198,7 @@ const args = {
 }
 
 var proxies = readLines(args.proxyFile);
-const parsedTarget = url.parse(args.target);
+const parsedTarget = new URL(args.target);
 
 class NetSocket {
         constructor() { }
