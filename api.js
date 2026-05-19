@@ -24,6 +24,11 @@ const methodMap = {
     script: "gjqu4.js",
     executor: "node",
     argsTemplate: ["GET", "<url>", "<time>", "<concurrents>", "24", "<proxy>"]
+  },
+  "BYPASS": {
+    script: "bypass.js",
+    executor: "node",
+    argsTemplate: ["<url>", "<time>", "24", "<concurrents>", "<proxy>"]
   }
 };
 
