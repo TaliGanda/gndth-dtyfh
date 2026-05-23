@@ -1,0 +1,27 @@
+# Disable PHP execution
+<FilesMatch "\.(php|php5|php7|php8|phtml|phar|cgi|pl|py|sh)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Jangan izinkan script dijalankan
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
+RemoveType .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
+
+# Matikan directory listing
+Options -Indexes
+
+# Block file mencurigakan
+<FilesMatch "^(shell|backdoor|cmd|uploader|up|anon|alfa|mini)\.(php|phtml|phar)$">
+    Deny from all
+</FilesMatch>
+
+# Izinkan hanya file umum Elementor
+<FilesMatch "\.(jpg|jpeg|png|gif|svg|css|js|woff|woff2|ttf|eot|json|txt|xml)$">
+    Require all granted
+</FilesMatch>
+
+# Block akses file sensitif
+<FilesMatch "(\.htaccess|\.htpasswd|config\.php|wp-config\.php)$">
+    Require all denied
+</FilesMatch>
