@@ -15,7 +15,8 @@ sources = [
     "https://raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS.txt",
     "https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS4.txt",
     "https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS5.txt",
-    "https://api.proxies.is/scraped?token=k3gOC3I11kU287677f5ca&timeout=5000&includeCountry=&type=all"
+    "https://api.proxies.is/scraped?token=k3gOC3I11kU287677f5ca&timeout=5000&includeCountry=&type=all",
+    "https://api.proxies.is/scraped?token=k3gOC3I11kU287677f5ca&timeout=5000&includeCountry=ID&type=all"
 ]
 
 MAX_CONCURRENT_REQUESTS = 200
