@@ -6,7 +6,7 @@ import time
 sources = [
     "https://api.proxies.is/scraped?token=k3gOC3I11kU287677f5ca&timeout=5000&includeCountry=&type=all",
     "https://api.proxies.is/scraped?token=k3gOC3I11kU287677f5ca&timeout=15000&includeCountry=ID&type=all",
-    "https://api.proxies.is/scraped?token=k3gOC3I11kU287677f5ca&timeout=1000&includeCountry=ID&type=all",
+    "https://api.proxies.is/scraped?token=k3gOC3I11kU287677f5ca&timeout=1000&includeCountry=&type=all",
     "https://tools.elitestress.st/api/proxy?license=23ff5205bbe84ef0e4b2ab4ed0340922&type=socks5&geo=ALL",
     "https://tools.elitestress.st/api/proxy?license=23ff5205bbe84ef0e4b2ab4ed0340922&type=http&geo=ALL",
     "https://tools.elitestress.st/api/proxy?license=23ff5205bbe84ef0e4b2ab4ed0340922&type=https&geo=ALL",
