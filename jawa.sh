@@ -1,6 +1,6 @@
 #!/bin/bash
 # ======================================================
-# Proxy Cycle Script
+# Proxy Cycle Script - FIXED
 # Menjalankan scrape -> merge dengan valid sebelumnya -> cek proxy -> simpan valid
 # Diulang setiap 30 menit
 # ======================================================
@@ -67,17 +67,33 @@ while true; do
         sleep 30
         continue
     fi
-    log "Scrape selesai. Jumlah proxy baru: $(wc -l < $PROXY_FILE 2>/dev/null || echo 0)"
+    
+    # Hitung jumlah proxy hasil scrape (dengan pengecekan file exist)
+    if [[ -f "$PROXY_FILE" ]]; then
+        scrape_count=$(wc -l < "$PROXY_FILE" 2>/dev/null || echo 0)
+    else
+        scrape_count=0
+    fi
+    log "Scrape selesai. Jumlah proxy baru dari sumber: $scrape_count"
 
     # Step 2: Gabungkan dengan proxy valid dari siklus sebelumnya (jika ada)
     if [[ -f "$VALID_FILE" ]]; then
-        log "Menggabungkan $PROXY_FILE (hasil scrape) dengan $VALID_FILE (proxy valid sebelumnya)"
+        valid_count_before=$(wc -l < "$VALID_FILE" 2>/dev/null || echo 0)
+        log "Menggabungkan $PROXY_FILE (hasil scrape) dengan $VALID_FILE (proxy valid sebelumnya - $valid_count_before proxy)"
         merge_files "$PROXY_FILE" "$VALID_FILE" "$TEMP_MERGED"
         mv "$TEMP_MERGED" "$PROXY_FILE"
-        local total=$(wc -l < "$PROXY_FILE" 2>/dev/null || echo 0)
-        log "Hasil penggabungan: $total total proxy unik"
+        total_merged=$(wc -l < "$PROXY_FILE" 2>/dev/null || echo 0)
+        log "Hasil penggabungan: $total_merged total proxy unik"
     else
         log "Tidak ada file $VALID_FILE sebelumnya, hanya menggunakan hasil scrape."
+        total_merged=$scrape_count
+    fi
+
+    # Jika setelah penggabungan tidak ada proxy, lewati pengecekan
+    if [[ "$total_merged" -eq 0 ]]; then
+        log "Tidak ada proxy untuk dicek. Langsung tidur 30 menit."
+        sleep 1800
+        continue
     fi
 
     # Step 3: Lakukan pengecekan proxy (menghasilkan valid_http.txt baru)
@@ -86,12 +102,12 @@ while true; do
         log "Pengecekan gagal, tetap melanjutkan ke siklus berikutnya..."
     fi
 
-    # Step 4: Tampilkan statistik
+    # Step 4: Tampilkan statistik proxy valid yang baru
     if [[ -f "$VALID_FILE" ]]; then
-        local valid_count=$(wc -l < "$VALID_FILE" 2>/dev/null || echo 0)
-        log "Proxy valid ditemukan: $valid_count"
+        valid_count_after=$(wc -l < "$VALID_FILE" 2>/dev/null || echo 0)
+        log "Proxy valid ditemukan pada siklus ini: $valid_count_after"
     else
-        log "Tidak ada proxy valid yang ditemukan"
+        log "Tidak ada proxy valid yang ditemukan pada siklus ini"
     fi
 
     log "Siklus selesai. Menunggu 30 menit sebelum siklus berikutnya..."
