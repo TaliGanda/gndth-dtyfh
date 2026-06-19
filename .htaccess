@@ -8,23 +8,13 @@ Options -Indexes -ExecCGI
 # PEMBLOKIRAN EKSEKUSI SCRIPT (PHP, Python, Perl, dll)
 # ==============================================================
 # Block akses web ke semua ekstensi script berbahaya (Case-insensitive)
-<FilesMatch "\.(?i:php|php3|php4|php5|php7|php8|phtml|phar|cgi|pl|py|sh|bash|rb)$">
+<FilesMatch "\.(?i:php|php3|php4|php5|php7|php8|phtml|htm|phar|cgi|pl|py|sh|bash|rb)$">
     Require all denied
 </FilesMatch>
 
 # Defense-in-depth: Hapus handler agar file tidak dirender sebagai script jika tembus
 RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
 RemoveType .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
-
-# ==============================================================
-# WHITELIST AREA
-# ==============================================================
-# Izinkan akses dan eksekusi HANYA untuk window-css.php
-<Files "window-css.php">
-    Require all granted
-    # Kembalikan handler PHP khusus untuk file ini agar tidak terunduh sebagai teks
-    SetHandler application/x-httpd-php
-</Files>
 
 # ==============================================================
 # FILTER FILE BERBAHAYA & MENCURIGAKAN
