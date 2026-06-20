@@ -55,7 +55,7 @@ sources = [
     "https://tools.elitestress.st/api/proxy?license=e841d06798fd5ed7f460ad031e312454&type=socks4&geo=ALL"
 ]
 
-MAX_CONCURRENT_REQUESTS = 1
+MAX_CONCURRENT_REQUESTS = 2
 total_proxies = 0
 
 
