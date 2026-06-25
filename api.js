@@ -11,9 +11,9 @@ const methodMap = {
     argsTemplate: ["<url>", "<time>", "32", "<concurrents>", "<proxy>"]
   },
   "H2-ENVY": {
-    script: "jawa14.js",
-    executor: "node",
-    argsTemplate: ["GET", "<url>", "<time>", "<concurrents>", "32", "<proxy>", "--bypass", "--googlebot", "--referer", "--secua"]
+    script: "browser",
+    executor: "xvfb-run -a python3",
+    argsTemplate: ["<url>", "<time>", "<concurrents>", "4", "--optimize true", "--ua RAND"]
   },
   "H2-FLOOD": {
     script: "flood.js",
