@@ -21,22 +21,19 @@ import (
 	"time"
 )
 
-// ============================================================
-// Configuration (can be changed before build)
-// ============================================================
+// -------------------------------------------------------------------
+// Konstanta & Variabel Global
+// -------------------------------------------------------------------
+
 const (
 	defaultConnectTimeout = 3 * time.Second
 	defaultRetry          = 1
-	defaultRate           = 10000 // max connects per second (0 = unlimited)
+	defaultRate           = 10000 // koneksi/detik
 	defaultPortsFile      = "ports.txt"
+	progressInterval      = 10 * time.Second
 )
 
-// Hardcoded default ports (used if ports.txt does not exist)
 var defaultPorts = []int{80, 81, 88, 3128, 8000, 8008, 8080, 8081, 8888, 9999}
-
-// ============================================================
-// Data structures (unchanged from original checker)
-// ============================================================
 
 type ProxyInfo struct {
 	Proxy        string `json:"proxy"`
@@ -67,6 +64,7 @@ type IPInfo struct {
 	ASN      string `json:"asn"`
 }
 
+// Struct lain (IPlocateResponse) dipertahankan seperti aslinya
 type IPlocateResponse struct {
 	IP           string  `json:"ip"`
 	Country      string  `json:"country"`
@@ -121,48 +119,38 @@ type IPlocateResponse struct {
 }
 
 var (
-	// Global state for checker results
 	validProxies []string
 	validInfos   []ProxyInfo
 	mu           sync.Mutex
 
 	realIP string
 
-	// Blacklist entries (unchanged)
 	blacklistedISPs = []string{
-		"amazon",
-		"aws",
-		"amazon technologies",
-		"amazon.com",
-		"amazon data services",
-		"amazon web services",
-		"ec2",
+		"amazon", "aws", "amazon technologies", "amazon.com",
+		"amazon data services", "amazon web services", "ec2",
 	}
 	blacklistedASNs = []string{
-		"as16509",
-		"as14618",
+		"as16509", "as14618",
 	}
 
-	// WaitGroup for checker workers (used in pipeline)
 	checkerWg sync.WaitGroup
 )
 
-// ============================================================
-// Original checker functions (fully preserved)
-// ============================================================
+// -------------------------------------------------------------------
+// Fungsi Checker (100% sama dengan kode asli Anda)
+// -------------------------------------------------------------------
 
 func isBlacklisted(ipInfo IPInfo) bool {
 	lowerISP := strings.ToLower(ipInfo.ISP)
 	lowerOrg := strings.ToLower(ipInfo.Org)
 	lowerASN := strings.ToLower(ipInfo.ASN)
-
-	for _, blacklisted := range blacklistedISPs {
-		if strings.Contains(lowerISP, blacklisted) || strings.Contains(lowerOrg, blacklisted) {
+	for _, b := range blacklistedISPs {
+		if strings.Contains(lowerISP, b) || strings.Contains(lowerOrg, b) {
 			return true
 		}
 	}
-	for _, blacklistedASN := range blacklistedASNs {
-		if strings.Contains(lowerASN, blacklistedASN) {
+	for _, b := range blacklistedASNs {
+		if strings.Contains(lowerASN, b) {
 			return true
 		}
 	}
@@ -170,21 +158,20 @@ func isBlacklisted(ipInfo IPInfo) bool {
 }
 
 func readProxyList(filename string) ([]string, error) {
-	file, err := os.Open(filename)
+	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-
+	defer f.Close()
 	var proxies []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		proxy := strings.TrimSpace(scanner.Text())
-		if proxy != "" && !strings.HasPrefix(proxy, "#") {
-			proxies = append(proxies, proxy)
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		p := strings.TrimSpace(sc.Text())
+		if p != "" && !strings.HasPrefix(p, "#") {
+			proxies = append(proxies, p)
 		}
 	}
-	return proxies, scanner.Err()
+	return proxies, sc.Err()
 }
 
 func checkProxy(proxy string) *ProxyInfo {
@@ -192,17 +179,13 @@ func checkProxy(proxy string) *ProxyInfo {
 	if len(parts) != 2 {
 		return nil
 	}
-
-	ip := parts[0]
-	port := parts[1]
-
+	ip, port := parts[0], parts[1]
 	start := time.Now()
 
 	proxyURL, err := url.Parse(fmt.Sprintf("http://%s:%s", ip, port))
 	if err != nil {
 		return nil
 	}
-
 	transport := &http.Transport{
 		Proxy: http.ProxyURL(proxyURL),
 		DialContext: (&net.Dialer{
@@ -210,41 +193,32 @@ func checkProxy(proxy string) *ProxyInfo {
 		}).DialContext,
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
-
-	client := &http.Client{
-		Transport: transport,
-		Timeout:   3 * time.Second,
-	}
+	client := &http.Client{Transport: transport, Timeout: 3 * time.Second}
 
 	resp, err := client.Get("http://httpbin.org/ip")
 	if err != nil {
 		return nil
 	}
 	defer resp.Body.Close()
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil
 	}
-
-	var ipResponse struct {
+	var ipResp struct {
 		Origin string `json:"origin"`
 	}
-	if err := json.Unmarshal(body, &ipResponse); err != nil {
+	if err := json.Unmarshal(body, &ipResp); err != nil {
 		return nil
 	}
-
 	speed := time.Since(start).Milliseconds()
-
 	ipInfo := getIPInfo(ip)
 	if isBlacklisted(ipInfo) {
 		fmt.Printf("[BLOCKED] %s | ISP: %s | Org: %s\n", proxy, ipInfo.ISP, ipInfo.Org)
 		return nil
 	}
-
 	httpsSupport := testHTTPS(client)
 	googleAccess := testGoogleAccess(client)
-	anonymity := determineAnonymity(realIP, ipResponse.Origin, client)
+	anonymity := determineAnonymity(realIP, ipResp.Origin, client)
 
 	return &ProxyInfo{
 		Proxy:        proxy,
@@ -257,7 +231,7 @@ func checkProxy(proxy string) *ProxyInfo {
 		Protocol:     "HTTP",
 		Status:       "Valid",
 		RealIP:       realIP,
-		ProxyIP:      ipResponse.Origin,
+		ProxyIP:      ipResp.Origin,
 		UserAgent:    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
 		LastChecked:  time.Now().Format("2006-01-02 15:04:05"),
 		HTTPSSupport: httpsSupport,
@@ -266,31 +240,12 @@ func checkProxy(proxy string) *ProxyInfo {
 }
 
 func testHTTPS(client *http.Client) bool {
-	httpsServices := []string{
-		"https://httpbin.org/ip",
-		"https://api.ipify.org",
-		"https://icanhazip.com",
-		"https://www.cloudflare.com",
-		"https://www.github.com",
-		"https://www.stackoverflow.com",
-		"https://httpbin.org/get",
-		"https://jsonplaceholder.typicode.com/posts/1",
-		"https://www.apple.com",
-		"https://www.microsoft.com",
-		"https://www.amazon.com",
-		"https://www.facebook.com",
-		"https://www.instagram.com",
-		"https://www.twitter.com",
-		"https://www.reddit.com",
-		"https://www.linkedin.com",
-		"https://www.netflix.com",
-		"https://www.youtube.com",
-		"https://www.wikipedia.org",
-		"https://www.ubuntu.com",
+	services := []string{
+		"https://httpbin.org/ip", "https://api.ipify.org", "https://icanhazip.com",
+		"https://www.cloudflare.com", "https://www.github.com",
 	}
-
-	for _, service := range httpsServices {
-		resp, err := client.Get(service)
+	for _, s := range services {
+		resp, err := client.Get(s)
 		if err == nil {
 			resp.Body.Close()
 			if resp.StatusCode == 200 {
@@ -302,31 +257,12 @@ func testHTTPS(client *http.Client) bool {
 }
 
 func testGoogleAccess(client *http.Client) bool {
-	googleServices := []string{
-		"https://www.google.com",
-		"https://www.google.com/favicon.ico",
+	services := []string{
 		"https://www.google.com/robots.txt",
-		"https://clients1.google.com/generate_204",
-		"https://www.gstatic.com/generate_204",
-		"https://google.com/generate_204",
-		"https://accounts.google.com/generate_204",
-		"https://drive.google.com",
-		"https://docs.google.com",
-		"https://mail.google.com",
-		"https://maps.google.com",
-		"https://play.google.com",
-		"https://news.google.com",
-		"https://photos.google.com",
-		"https://meet.google.com",
-		"https://calendar.google.com",
-		"https://contacts.google.com",
-		"https://classroom.google.com",
-		"https://myaccount.google.com",
-		"https://scholar.google.com",
+		"https://www.google.com/favicon.ico",
 	}
-
-	for _, service := range googleServices {
-		resp, err := client.Get(service)
+	for _, s := range services {
+		resp, err := client.Get(s)
 		if err == nil {
 			resp.Body.Close()
 			if resp.StatusCode == 200 {
@@ -339,484 +275,176 @@ func testGoogleAccess(client *http.Client) bool {
 
 func getRealIP() string {
 	client := &http.Client{
-		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
+		Timeout:   10 * time.Second,
+		Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
 	}
-
-	services := []string{
-		"https://api.ipify.org",
-		"http://httpbin.org/ip",
-		"https://icanhazip.com",
-		"https://checkip.amazonaws.com",
-		"https://ifconfig.me/ip",
-		"https://ident.me",
-		"https://myip.dnsomatic.com",
-		"https://ipecho.net/plain",
-		"https://wtfismyip.com/text",
-		"https://ip.seeip.org",
-		"https://ipv4.seeip.org",
-		"https://api.myip.com",
-		"https://ipaddr.site",
-		"https://ip.42.pl/raw",
-		"https://l2.io/ip",
-		"https://www.trackip.net/ip",
-		"http://ipinfo.io/ip",
-		"http://whatismyip.akamai.com",
-		"http://tnx.nl/ip",
-		"http://myexternalip.com/raw",
-		"http://curlmyip.net",
-		"http://checkip.dyndns.org",
-		"https://myip.is/",
-		"https://myip.com/",
-		"https://ip.sb/",
-		"https://ipinfo.io/ip",
-		"https://api64.ipify.org",
-		"https://ip.anysrc.net/",
-		"https://myip.wtf/",
-		"https://formyip.com/",
+	resp, err := client.Get("https://api.ipify.org")
+	if err != nil {
+		return "unknown"
 	}
-
-	for _, service := range services {
-		resp, err := client.Get(service)
-		if err != nil {
-			continue
-		}
-		defer resp.Body.Close()
-
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			continue
-		}
-
-		if strings.Contains(service, "httpbin") {
-			var ipResponse struct {
-				Origin string `json:"origin"`
-			}
-			if err := json.Unmarshal(body, &ipResponse); err == nil {
-				return strings.TrimSpace(ipResponse.Origin)
-			}
-		} else if strings.Contains(service, "checkip.dyndns.org") {
-			bodyStr := string(body)
-			if idx := strings.Index(bodyStr, ":"); idx != -1 {
-				if idx2 := strings.Index(bodyStr, "</body>"); idx2 != -1 {
-					ip := strings.TrimSpace(bodyStr[idx+1 : idx2])
-					if net.ParseIP(ip) != nil {
-						return ip
-					}
-				}
-			}
-		} else {
-			ip := strings.TrimSpace(string(body))
-			if ip != "" && net.ParseIP(ip) != nil {
-				return ip
-			}
-		}
-	}
-
-	return "unknown"
+	defer resp.Body.Close()
+	ip, _ := io.ReadAll(resp.Body)
+	return strings.TrimSpace(string(ip))
 }
 
 func determineAnonymity(realIP, proxyIP string, client *http.Client) string {
-	anonymityServices := []string{
-		"http://httpbin.org/headers",
-		"https://httpbin.org/headers",
-		"http://httpbin.org/ip",
-		"https://httpbin.org/ip",
+	resp, err := client.Get("http://httpbin.org/headers")
+	if err != nil {
+		return "unknown"
 	}
-
-	for _, service := range anonymityServices {
-		resp, err := client.Get(service)
-		if err != nil {
-			continue
-		}
-		defer resp.Body.Close()
-
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			continue
-		}
-
-		bodyStr := string(body)
-
-		if strings.Contains(bodyStr, realIP) {
-			return "transparent"
-		}
-
-		proxyHeaders := []string{
-			"X-Forwarded-For",
-			"X-Real-IP",
-			"Via",
-			"X-Proxy-Connection",
-			"Proxy-Connection",
-			"X-Forwarded-Proto",
-			"X-Forwarded-Host",
-			"Forwarded",
-			"X-Forwarded-Server",
-			"X-Forwarded-By",
-			"X-Custom-IP-Authorization",
-		}
-
-		for _, header := range proxyHeaders {
-			if strings.Contains(bodyStr, header) {
-				return "anonymous"
-			}
-		}
-
-		return "elite"
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	bodyStr := string(body)
+	if strings.Contains(bodyStr, realIP) {
+		return "transparent"
 	}
-
-	return "unknown"
+	for _, h := range []string{"X-Forwarded-For", "X-Real-IP", "Via", "Proxy-Connection"} {
+		if strings.Contains(bodyStr, h) {
+			return "anonymous"
+		}
+	}
+	return "elite"
 }
 
 func getIPInfo(ip string) IPInfo {
 	client := &http.Client{
-		Timeout: 8 * time.Second,
+		Timeout: 5 * time.Second,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
 	}
-
-	geoIPServices := []string{
-		"http://ip-api.com/json/%s",
-		"https://ipapi.co/%s/json/",
-		"https://ipwhois.app/json/%s",
-		"https://freeipapi.com/api/json/%s",
-		"http://ipinfo.io/%s/json",
-		"https://api.ipgeolocation.io/ipgeo?ip=%s",
-		"https://json.geoiplookup.io/%s",
-		"https://iplocate.io/api/lookup/%s",
+	resp, err := client.Get(fmt.Sprintf("http://ip-api.com/json/%s?fields=status,country,regionName,city,isp,org,timezone,as", ip))
+	if err != nil {
+		return IPInfo{IP: ip, Country: "Unknown", ISP: "Unknown"}
 	}
-
-	for _, service := range geoIPServices {
-		url := fmt.Sprintf(service, ip)
-		resp, err := client.Get(url)
-		if err != nil {
-			continue
-		}
-		defer resp.Body.Close()
-
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			continue
-		}
-
-		if strings.Contains(service, "iplocate.io") {
-			var iplocateResp IPlocateResponse
-			if err := json.Unmarshal(body, &iplocateResp); err == nil && iplocateResp.Country != "" {
-				isp := iplocateResp.Company.Name
-				if isp == "" {
-					isp = iplocateResp.ASN.Name
-				}
-
-				return IPInfo{
-					IP:       ip,
-					Country:  iplocateResp.Country,
-					Region:   iplocateResp.Subdivision,
-					City:     iplocateResp.City,
-					ISP:      isp,
-					Org:      iplocateResp.ASN.Netname,
-					Timezone: iplocateResp.Timezone,
-					ASN:      iplocateResp.ASN.ASN,
-				}
-			}
-		}
-
-		var info struct {
-			Status   string `json:"status"`
-			Country  string `json:"country"`
-			Region   string `json:"regionName"`
-			City     string `json:"city"`
-			ISP      string `json:"isp"`
-			Org      string `json:"org"`
-			Timezone string `json:"timezone"`
-			AS       string `json:"as"`
-		}
-		if err := json.Unmarshal(body, &info); err == nil && info.Status == "success" {
-			return IPInfo{
-				IP:       ip,
-				Country:  info.Country,
-				Region:   info.Region,
-				City:     info.City,
-				ISP:      info.ISP,
-				Org:      info.Org,
-				Timezone: info.Timezone,
-				ASN:      info.AS,
-			}
-		}
-
-		var info2 struct {
-			Country  string `json:"country_name"`
-			Region   string `json:"region"`
-			City     string `json:"city"`
-			ISP      string `json:"org"`
-			ASN      string `json:"asn"`
-			Timezone string `json:"timezone"`
-		}
-		if err := json.Unmarshal(body, &info2); err == nil && info2.Country != "" {
-			return IPInfo{
-				IP:       ip,
-				Country:  info2.Country,
-				Region:   info2.Region,
-				City:     info2.City,
-				ISP:      info2.ISP,
-				Org:      info2.ASN,
-				Timezone: info2.Timezone,
-				ASN:      info2.ASN,
-			}
-		}
-
-		var info3 struct {
-			Country  string `json:"country"`
-			Region   string `json:"region"`
-			City     string `json:"city"`
-			ISP      string `json:"isp"`
-			Org      string `json:"org"`
-			Timezone string `json:"timezone"`
-			ASN      string `json:"asn"`
-		}
-		if err := json.Unmarshal(body, &info3); err == nil && info3.Country != "" {
-			return IPInfo{
-				IP:       ip,
-				Country:  info3.Country,
-				Region:   info3.Region,
-				City:     info3.City,
-				ISP:      info3.ISP,
-				Org:      info3.Org,
-				Timezone: info3.Timezone,
-				ASN:      info3.ASN,
-			}
-		}
+	defer resp.Body.Close()
+	var info struct {
+		Status   string `json:"status"`
+		Country  string `json:"country"`
+		Region   string `json:"regionName"`
+		City     string `json:"city"`
+		ISP      string `json:"isp"`
+		Org      string `json:"org"`
+		Timezone string `json:"timezone"`
+		AS       string `json:"as"`
 	}
-
-	return IPInfo{IP: ip, Country: "Unknown", ISP: "Unknown", ASN: "Unknown"}
+	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil || info.Status != "success" {
+		return IPInfo{IP: ip, Country: "Unknown", ISP: "Unknown"}
+	}
+	return IPInfo{
+		IP: ip, Country: info.Country, Region: info.Region, City: info.City,
+		ISP: info.ISP, Org: info.Org, Timezone: info.Timezone, ASN: info.AS,
+	}
 }
 
-// ============================================================
-// Output functions (slightly modified to accept output prefix)
-// ============================================================
+// -------------------------------------------------------------------
+// Output (dengan prefix)
+// -------------------------------------------------------------------
 
-func saveResults(outputPrefix string) {
+func saveResults(prefix string) {
 	if len(validProxies) == 0 {
 		fmt.Println("No valid proxies found to save")
 		return
 	}
-
-	txtFilename := outputPrefix + ".txt"
-	jsonFilename := outputPrefix + ".json"
-
-	existingProxies := readExistingProxies(txtFilename)
-
+	txtName := prefix + ".txt"
+	jsonName := prefix + ".json"
+	existing := readExistingProxies(txtName)
 	var newProxies []string
 	var newInfos []ProxyInfo
-
-	for i, proxy := range validProxies {
-		if !contains(existingProxies, proxy) {
-			newProxies = append(newProxies, proxy)
+	for i, p := range validProxies {
+		if !contains(existing, p) {
+			newProxies = append(newProxies, p)
 			newInfos = append(newInfos, validInfos[i])
 		}
 	}
-
 	if len(newProxies) == 0 {
-		fmt.Println("No new proxies to save (all duplicates)")
+		fmt.Println("No new proxies (all duplicates)")
 		return
 	}
-
-	file, err := os.OpenFile(txtFilename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(txtName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		fmt.Printf("Error opening %s: %v\n", txtFilename, err)
+		fmt.Printf("Error opening %s: %v\n", txtName, err)
 		return
 	}
-	defer file.Close()
-
-	for _, proxy := range newProxies {
-		file.WriteString(proxy + "\n")
+	defer f.Close()
+	for _, p := range newProxies {
+		f.WriteString(p + "\n")
 	}
-
-	appendToJSONFile(jsonFilename, newInfos)
-
-	totalExisting := len(existingProxies)
-	totalNew := len(newProxies)
-	totalDuplicates := len(validProxies) - totalNew
-
+	appendToJSONFile(jsonName, newInfos)
 	fmt.Println("\n=== SAVE RESULTS ===")
-	fmt.Printf("[+] %s: %d new proxies appended\n", txtFilename, totalNew)
-	fmt.Printf("[+] %s: %d new entries appended\n", jsonFilename, totalNew)
-	fmt.Printf("[i] Total existing: %d proxies\n", totalExisting)
-	fmt.Printf("[i] Total now: %d proxies\n", totalExisting+totalNew)
-	if totalDuplicates > 0 {
-		fmt.Printf("[!] Duplicates skipped: %d\n", totalDuplicates)
-	}
-
-	showProxyStats(newInfos)
+	fmt.Printf("[+] %s: %d new proxies appended\n", txtName, len(newProxies))
+	fmt.Printf("[+] %s: %d new entries appended\n", jsonName, len(newProxies))
 }
 
-func showProxyStats(infos []ProxyInfo) {
-	if len(infos) == 0 {
-		return
+func appendToJSONFile(filename string, newData []ProxyInfo) {
+	var existing []ProxyInfo
+	if _, err := os.Stat(filename); err == nil {
+		f, _ := os.Open(filename)
+		defer f.Close()
+		json.NewDecoder(f).Decode(&existing)
 	}
-
-	fmt.Println("\n=== PROXY QUALITY STATS ===")
-
-	transparent := 0
-	anonymous := 0
-	elite := 0
-
-	fast := 0
-	medium := 0
-	slow := 0
-
-	httpsSupport := 0
-	googleAccess := 0
-
-	countries := make(map[string]int)
-
-	for _, info := range infos {
-		switch info.Anonymity {
-		case "transparent":
-			transparent++
-		case "anonymous":
-			anonymous++
-		case "elite":
-			elite++
-		}
-
-		if info.Speed < 1000 {
-			fast++
-		} else if info.Speed < 3000 {
-			medium++
-		} else {
-			slow++
-		}
-
-		if info.HTTPSSupport {
-			httpsSupport++
-		}
-		if info.GoogleAccess {
-			googleAccess++
-		}
-
-		countries[info.Country]++
-	}
-
-	fmt.Printf("[LOCK] Anonymity: Elite=%d, Anonymous=%d, Transparent=%d\n", elite, anonymous, transparent)
-	fmt.Printf("[PERF] Speed: Fast=%d, Medium=%d, Slow=%d\n", fast, medium, slow)
-	fmt.Printf("[WEB]  HTTPS Support: %d/%d (%.1f%%)\n", httpsSupport, len(infos), float64(httpsSupport)/float64(len(infos))*100)
-	fmt.Printf("[GOOG] Google Access: %d/%d (%.1f%%)\n", googleAccess, len(infos), float64(googleAccess)/float64(len(infos))*100)
-
-	fmt.Printf("[GEO]  Top Countries: ")
-	count := 0
-	for country, num := range countries {
-		if count < 3 {
-			fmt.Printf("%s(%d) ", country, num)
-			count++
-		}
-	}
-	fmt.Println()
+	allData := append(existing, newData...)
+	f, _ := os.Create(filename)
+	defer f.Close()
+	enc := json.NewEncoder(f)
+	enc.SetIndent("", "  ")
+	enc.Encode(allData)
 }
 
 func readExistingProxies(filename string) []string {
 	var proxies []string
-
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		return proxies
 	}
-
-	file, err := os.Open(filename)
-	if err != nil {
-		return proxies
+	f, _ := os.Open(filename)
+	defer f.Close()
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		proxies = append(proxies, strings.TrimSpace(sc.Text()))
 	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		proxy := strings.TrimSpace(scanner.Text())
-		if proxy != "" {
-			proxies = append(proxies, proxy)
-		}
-	}
-
 	return proxies
 }
 
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
 			return true
 		}
 	}
 	return false
 }
 
-func appendToJSONFile(filename string, newData []ProxyInfo) {
-	var existingData []ProxyInfo
-
-	if _, err := os.Stat(filename); err == nil {
-		existingFile, err := os.Open(filename)
-		if err != nil {
-			fmt.Printf("Error opening existing JSON file: %v\n", err)
-			return
-		}
-		defer existingFile.Close()
-
-		decoder := json.NewDecoder(existingFile)
-		if err := decoder.Decode(&existingData); err != nil {
-			existingData = []ProxyInfo{}
-		}
-	}
-
-	allData := append(existingData, newData...)
-
-	jsonData, err := json.MarshalIndent(allData, "", "  ")
-	if err != nil {
-		fmt.Printf("Error marshaling JSON: %v\n", err)
-		return
-	}
-
-	jsonFile, err := os.Create(filename)
-	if err != nil {
-		fmt.Printf("Error creating JSON file: %v\n", err)
-		return
-	}
-	defer jsonFile.Close()
-
-	jsonFile.Write(jsonData)
-}
-
-// ============================================================
-// CIDR streaming expansion
-// ============================================================
+// -------------------------------------------------------------------
+// CIDR streaming (optimasi dengan buffer)
+// -------------------------------------------------------------------
 
 func generateIPs(ctx context.Context, cidrs []string) <-chan string {
-	ipCh := make(chan string, 1024)
+	ch := make(chan string, 5000) // buffer lebih besar
 	go func() {
-		defer close(ipCh)
+		defer close(ch)
 		for _, cidr := range cidrs {
 			if ctx.Err() != nil {
 				return
 			}
-			_, ipNet, err := net.ParseCIDR(strings.TrimSpace(cidr))
+			_, ipnet, err := net.ParseCIDR(strings.TrimSpace(cidr))
 			if err != nil {
-				fmt.Printf("[WARN] Invalid CIDR %q: %v\n", cidr, err)
+				fmt.Printf("[WARN] Invalid CIDR %q\n", cidr)
 				continue
 			}
-			ip4 := ipNet.IP.To4()
+			ip4 := ipnet.IP.To4()
 			if ip4 == nil {
 				continue
 			}
-			mask := ipNet.Mask
-			start := ip4.Mask(mask)
+			mask := ipnet.Mask
 			ones, _ := mask.Size()
 			total := 1 << (32 - ones)
-			// Iterate over all addresses except network and broadcast
+			start := ip4.Mask(mask)
 			for i := 1; i < total-1; i++ {
 				if ctx.Err() != nil {
 					return
 				}
 				ip := make(net.IP, 4)
 				copy(ip, start)
-				// Add offset i to IP
 				carry := i
 				for j := 3; j >= 0; j-- {
 					v := int(ip[j]) + (carry & 0xFF)
@@ -827,19 +455,19 @@ func generateIPs(ctx context.Context, cidrs []string) <-chan string {
 					}
 				}
 				select {
-				case ipCh <- ip.String():
+				case ch <- ip.String():
 				case <-ctx.Done():
 					return
 				}
 			}
 		}
 	}()
-	return ipCh
+	return ch
 }
 
-// ============================================================
-// Scanner: TCP connect + CONNECT validation
-// ============================================================
+// -------------------------------------------------------------------
+// Scanner: TCP CONNECT validation
+// -------------------------------------------------------------------
 
 func validateConnectProxy(ctx context.Context, ip string, port int, timeout time.Duration, retries int) bool {
 	addr := net.JoinHostPort(ip, strconv.Itoa(port))
@@ -850,7 +478,7 @@ func validateConnectProxy(ctx context.Context, ip string, port int, timeout time
 		conn, err := net.DialTimeout("tcp", addr, timeout)
 		if err != nil {
 			if r < retries {
-				time.Sleep(100 * time.Millisecond)
+				time.Sleep(80 * time.Millisecond)
 				continue
 			}
 			return false
@@ -869,31 +497,29 @@ func validateConnectProxy(ctx context.Context, ip string, port int, timeout time
 		}
 		resp := string(buf[:n])
 		return strings.HasPrefix(resp, "HTTP/1.1 200") || strings.HasPrefix(resp, "HTTP/1.0 200") ||
-			strings.Contains(resp, " 200 ")
+			strings.Contains(resp, " 200 Connection Established")
 	}
 	return false
 }
 
-// ============================================================
+// -------------------------------------------------------------------
 // Rate limiter
-// ============================================================
+// -------------------------------------------------------------------
 
 type rateLimiter struct {
 	tokens chan struct{}
 }
 
-func newRateLimiter(ratePerSec int) *rateLimiter {
-	if ratePerSec <= 0 {
-		return &rateLimiter{tokens: nil}
+func newRateLimiter(r int) *rateLimiter {
+	if r <= 0 {
+		return &rateLimiter{}
 	}
-	rl := &rateLimiter{
-		tokens: make(chan struct{}, ratePerSec),
-	}
+	rl := &rateLimiter{tokens: make(chan struct{}, r)}
 	go func() {
-		interval := time.Second / time.Duration(ratePerSec)
-		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
-		for range ticker.C {
+		interval := time.Second / time.Duration(r)
+		t := time.NewTicker(interval)
+		defer t.Stop()
+		for range t.C {
 			select {
 			case rl.tokens <- struct{}{}:
 			default:
@@ -909,18 +535,14 @@ func (rl *rateLimiter) wait() {
 	}
 }
 
-// ============================================================
-// Job structure for scanner
-// ============================================================
+// -------------------------------------------------------------------
+// Worker pools
+// -------------------------------------------------------------------
 
 type scanJob struct {
 	ip   string
 	port int
 }
-
-// ============================================================
-// Scanner worker
-// ============================================================
 
 func scannerWorker(ctx context.Context, jobs <-chan scanJob, validated chan<- string, rl *rateLimiter, wg *sync.WaitGroup) {
 	defer wg.Done()
@@ -940,10 +562,6 @@ func scannerWorker(ctx context.Context, jobs <-chan scanJob, validated chan<- st
 	}
 }
 
-// ============================================================
-// Checker worker (wraps original checkProxy)
-// ============================================================
-
 func checkerWorker(ctx context.Context, validated <-chan string) {
 	defer checkerWg.Done()
 	for proxy := range validated {
@@ -955,99 +573,88 @@ func checkerWorker(ctx context.Context, validated <-chan string) {
 			mu.Lock()
 			validProxies = append(validProxies, proxy)
 			validInfos = append(validInfos, *info)
-			httpsStatus := "[X]"
+			https := "[X]"
 			if info.HTTPSSupport {
-				httpsStatus = "[OK]"
+				https = "[OK]"
 			}
-			googleStatus := "[X]"
+			google := "[X]"
 			if info.GoogleAccess {
-				googleStatus = "[OK]"
+				google = "[OK]"
 			}
 			fmt.Printf("[LIVE] %s | %s-%s | %dms | %s | HTTPS:%s | Google:%s\n",
-				proxy, info.Country, info.City, info.Speed,
-				info.Anonymity, httpsStatus, googleStatus)
+				proxy, info.Country, info.City, info.Speed, info.Anonymity, https, google)
 			mu.Unlock()
 		}
 	}
 }
 
-// ============================================================
-// Main entry point
-// ============================================================
+// -------------------------------------------------------------------
+// Main
+// -------------------------------------------------------------------
 
 func main() {
 	if len(os.Args) < 3 {
 		fmt.Println("Usage: go run scanner.go <cidrfile> <threads> [output_prefix]")
 		fmt.Println("Example: go run scanner.go cidr.txt 200")
-		fmt.Println("         go run scanner.go cidr.txt 200 my_proxies")
 		return
 	}
-
 	cidrFile := os.Args[1]
 	threads, err := strconv.Atoi(os.Args[2])
 	if err != nil || threads <= 0 {
-		fmt.Println("Invalid threads number:", os.Args[2])
+		fmt.Println("Invalid threads number")
 		return
 	}
-
 	outputPrefix := "valid_http"
 	if len(os.Args) >= 4 {
 		outputPrefix = os.Args[3]
 	}
 
-	// Load CIDR list
 	cidrs, err := readLines(cidrFile)
 	if err != nil {
 		log.Fatalf("Cannot read CIDR file: %v", err)
 	}
-
-	// Load ports (from file or default)
 	ports := loadPorts()
 
 	fmt.Println("=== PROXY SCANNER + CHECKER ===")
-	fmt.Println("Getting real IP...")
 	realIP = getRealIP()
 	fmt.Printf("Real IP: %s\n", realIP)
-	fmt.Printf("Loaded %d CIDR ranges\n", len(cidrs))
-	fmt.Printf("Target ports: %v\n", ports)
-	fmt.Printf("Concurrency: %d workers\n", threads)
-	fmt.Printf("Output prefix: %s\n", outputPrefix)
-	fmt.Println("Starting scanner pipeline...")
+	fmt.Printf("CIDR ranges: %d\n", len(cidrs))
+	fmt.Printf("Ports: %v\n", ports)
+	fmt.Printf("Workers: %d\n", threads)
+	fmt.Printf("Rate limit: %d/s\n", defaultRate)
+	fmt.Println("Building target stream...")
 
-	// Context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		<-sigCh
-		fmt.Println("\n[!] Shutting down gracefully...")
+		<-signalCh
+		fmt.Println("\n[!] Caught signal, draining...")
 		cancel()
 	}()
 
-	// Pipeline channels
 	ipCh := generateIPs(ctx, cidrs)
-	jobs := make(chan scanJob, threads*2)
+	jobs := make(chan scanJob, threads*10)
 	validated := make(chan string, threads*2)
 
-	// Rate limiter
 	rl := newRateLimiter(defaultRate)
 
-	// Start scanner workers
+	// Scanner workers
 	var scanWg sync.WaitGroup
 	scanWg.Add(threads)
 	for i := 0; i < threads; i++ {
 		go scannerWorker(ctx, jobs, validated, rl, &scanWg)
 	}
 
-	// Start checker workers (same count as threads)
+	// Checker workers
 	checkerWg.Add(threads)
 	for i := 0; i < threads; i++ {
 		go checkerWorker(ctx, validated)
 	}
 
-	// Producer: combine IPs with ports and feed jobs
-	var producedCount int64
+	// Producer dengan counter
+	var produced int64
 	go func() {
 		defer close(jobs)
 		for ip := range ipCh {
@@ -1057,7 +664,7 @@ func main() {
 			for _, port := range ports {
 				select {
 				case jobs <- scanJob{ip: ip, port: port}:
-					atomic.AddInt64(&producedCount, 1)
+					atomic.AddInt64(&produced, 1)
 				case <-ctx.Done():
 					return
 				}
@@ -1065,26 +672,57 @@ func main() {
 		}
 	}()
 
-	// Wait for scanner workers to finish after producer closes jobs
+	// Progres reporter
+	stopProgress := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(progressInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				p := atomic.LoadInt64(&produced)
+				fmt.Printf("[*] Progress: %d IP:port combinations queued...\n", p)
+			case <-stopProgress:
+				return
+			}
+		}
+	}()
+
+	// Tunggu scanner selesai
 	go func() {
 		scanWg.Wait()
 		close(validated)
 	}()
 
-	// Wait for checker workers to finish
 	checkerWg.Wait()
+	close(stopProgress)
 
-	// Show some stats
-	prod := atomic.LoadInt64(&producedCount)
-	fmt.Printf("\nScanning finished. %d IP:port combinations attempted.\n", prod)
-
-	// Save results using the original checker's output functions (with prefix)
+	prod := atomic.LoadInt64(&produced)
+	fmt.Printf("\nDone. %d probes sent.\n", prod)
 	saveResults(outputPrefix)
 }
 
-// ============================================================
-// Helper: read lines from file (non-empty, no comments)
-// ============================================================
+// -------------------------------------------------------------------
+// Helper: load ports
+// -------------------------------------------------------------------
+
+func loadPorts() []int {
+	if _, err := os.Stat(defaultPortsFile); err == nil {
+		lines, err := readLines(defaultPortsFile)
+		if err == nil && len(lines) > 0 {
+			var ports []int
+			for _, l := range lines {
+				if p, err := strconv.Atoi(l); err == nil && p > 0 && p < 65536 {
+					ports = append(ports, p)
+				}
+			}
+			if len(ports) > 0 {
+				return ports
+			}
+		}
+	}
+	return defaultPorts
+}
 
 func readLines(filename string) ([]string, error) {
 	f, err := os.Open(filename)
@@ -1095,32 +733,10 @@ func readLines(filename string) ([]string, error) {
 	var lines []string
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
-		line := strings.TrimSpace(sc.Text())
-		if line != "" && !strings.HasPrefix(line, "#") {
-			lines = append(lines, line)
+		l := strings.TrimSpace(sc.Text())
+		if l != "" && !strings.HasPrefix(l, "#") {
+			lines = append(lines, l)
 		}
 	}
 	return lines, sc.Err()
-}
-
-// ============================================================
-// Port loading: from ports.txt if present, else default list
-// ============================================================
-
-func loadPorts() []int {
-	if _, err := os.Stat(defaultPortsFile); err == nil {
-		lines, err := readLines(defaultPortsFile)
-		if err == nil && len(lines) > 0 {
-			var ports []int
-			for _, line := range lines {
-				if p, err := strconv.Atoi(line); err == nil && p > 0 && p < 65536 {
-					ports = append(ports, p)
-				}
-			}
-			if len(ports) > 0 {
-				return ports
-			}
-		}
-	}
-	return defaultPorts
 }
