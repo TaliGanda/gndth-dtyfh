@@ -2,67 +2,31 @@
 
 import ipaddress
 import random
-import urllib.request
-import tempfile
-import os
 
-URL = "https://raw.githubusercontent.com/TaliGanda/gndth-dtyfh/refs/heads/main/ID_DE.txt"
-
-PORTS = [
-    80,
-    999,
-    3128,
-    8080,
-    9090,
-    1328,
-]
-
+INPUT = "ID_DE.txt"
 OUTPUT = "ip_port.txt"
 
-print("[+] Downloading CIDR list...")
+PORTS = [80, 999, 3128, 8080, 9090, 1328]
 
-tmp = tempfile.NamedTemporaryFile(delete=False)
-urllib.request.urlretrieve(URL, tmp.name)
+with open(OUTPUT, "w") as out:
+    with open(INPUT) as f:
+        for line in f:
+            line = line.strip()
 
-print("[+] Expanding CIDRs...")
+            if not line or line.startswith("#"):
+                continue
 
-temp_output = tempfile.NamedTemporaryFile(delete=False, mode="w")
+            try:
+                net = ipaddress.ip_network(line, strict=False)
 
-with open(tmp.name) as f:
-    for line in f:
-        line = line.strip()
+                for ip in net:
+                    ports = PORTS[:]
+                    random.shuffle(ports)
 
-        if not line or line.startswith("#"):
-            continue
+                    for port in ports:
+                        out.write(f"{ip}:{port}\n")
 
-        try:
-            net = ipaddress.ip_network(line, strict=False)
+            except ValueError:
+                pass
 
-            for ip in net:
-                ip = str(ip)
-                ports = PORTS[:]
-                random.shuffle(ports)
-
-                for port in ports:
-                    temp_output.write(f"{ip}:{port}\n")
-
-        except Exception:
-            pass
-
-temp_output.close()
-
-print("[+] Shuffling...")
-
-with open(temp_output.name) as f:
-    lines = f.readlines()
-
-random.shuffle(lines)
-
-with open(OUTPUT, "w") as f:
-    f.writelines(lines)
-
-os.unlink(tmp.name)
-os.unlink(temp_output.name)
-
-print(f"[+] Done -> {OUTPUT}")
-print(f"[+] Total: {len(lines):,} entries")
+print(f"Done. Saved to {OUTPUT}")
