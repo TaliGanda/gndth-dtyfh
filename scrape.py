@@ -49,10 +49,10 @@ sources = [
     "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=2000&includeCountry=ID&type=all",
     "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=1000&includeCountry=&type=all",
     "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=1000&includeCountry=ID&type=all",
-    "https://tools.elitestress.st/api/proxy?license=e841d06798fd5ed7f460ad031e312454&type=socks5&geo=ALL",
-    "https://tools.elitestress.st/api/proxy?license=e841d06798fd5ed7f460ad031e312454&type=http&geo=ALL",
-    "https://tools.elitestress.st/api/proxy?license=e841d06798fd5ed7f460ad031e312454&type=https&geo=ALL",
-    "https://tools.elitestress.st/api/proxy?license=e841d06798fd5ed7f460ad031e312454&type=socks4&geo=ALL"
+    "https://tools.elitestress.st/api/proxy?license=e841d06798fd5ed7f460ad031e312454&type=socks5&geo=ID",
+    "https://tools.elitestress.st/api/proxy?license=e841d06798fd5ed7f460ad031e312454&type=http&geo=ID",
+    "https://tools.elitestress.st/api/proxy?license=e841d06798fd5ed7f460ad031e312454&type=https&geo=ID",
+    "https://tools.elitestress.st/api/proxy?license=e841d06798fd5ed7f460ad031e312454&type=socks4&geo=ID"
 ]
 
 MAX_CONCURRENT_REQUESTS = 1
