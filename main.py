@@ -1,7 +1,7 @@
 import ipaddress
 
 # Baca semua CIDR (abaikan IPv6 & baris kosong)
-with open('cidr_list.txt', 'r') as f:
+with open('ID_DE.txt', 'r') as f:
     lines = f.read().splitlines()
 
 ipv4_cidrs = []
