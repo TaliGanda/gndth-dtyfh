@@ -8,7 +8,7 @@ const methodMap = {
   "H2-STORM": {
     script: "ciko.js",
     executor: "node",
-    argsTemplate: ["<url>", "<time>", "32", "<concurrents>", "<proxy>"]
+    argsTemplate: ["<url>", "<time>", "<concurrents>", "24", "<proxy>"]
   },
   "BROWSER": {
     script: "browser.py",
@@ -18,7 +18,7 @@ const methodMap = {
   "H2-FLOOD": {
     script: "flood.js",
     executor: "node",
-    argsTemplate: ["<url>", "<time>", "32", "<concurrents>", "<proxy>"]
+    argsTemplate: ["<url>", "<time>", "<concurrents>", "24", "<proxy>"]
   },
   "H2-PID": {
     script: "gjqu4.js",
