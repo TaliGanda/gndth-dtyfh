@@ -11,7 +11,7 @@ const methodMap = {
     argsTemplate: ["<url>", "<time>", "<concurrents>", "24", "<proxy>"]
   },
   "BROWSER": {
-    script: "browser.py",
+    script: "browsern.py",
     executor: "xvfb-run -a python3",
     argsTemplate: ["<url>", "<time>", "<concurrents>", "4", "--optimize true", "--ua RAND"]
   },
