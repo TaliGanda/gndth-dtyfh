@@ -10,8 +10,8 @@ const methodMap = {
     executor: "node",
     argsTemplate: ["<url>", "<time>", "32", "<concurrents>", "<proxy>"]
   },
-  "H2-ENVY": {
-    script: "browser",
+  "BROWSER": {
+    script: "browser.py",
     executor: "xvfb-run -a python3",
     argsTemplate: ["<url>", "<time>", "<concurrents>", "4", "--optimize true", "--ua RAND"]
   },
