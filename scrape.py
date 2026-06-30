@@ -29,7 +29,7 @@ MAX_CONCURRENT_REQUESTS = 1
 total_proxies = 0
 
 
-async def fetch_proxies(session, url):
+async def fetch_proxies(session, file, url):
     global total_proxies
 
     try:
@@ -45,38 +45,31 @@ async def fetch_proxies(session, url):
 
                 total_proxies += len(proxies)
 
-                async with aiofiles.open("proxy.txt", "a") as f:
-                    await f.writelines(
-                        [proxy + "\n" for proxy in proxies]
-                    )
+                await file.writelines(
+                    proxy + "\n"
+                    for proxy in proxies
+                )
 
                 print(f"[+] {len(proxies)} proxies from {url}")
 
             else:
-                print(
-                    f"[-] Failed to fetch {url} "
-                    f"(Status: {response.status})"
-                )
+                print(f"[-] Failed to fetch {url} (Status: {response.status})")
 
     except Exception as e:
         print(f"[-] Error fetching {url}: {e}")
 
 
 async def main():
-    async with aiofiles.open("proxy.txt", "w") as f:
-        await f.write("")
-
     connector = aiohttp.TCPConnector(limit=MAX_CONCURRENT_REQUESTS)
 
-    async with aiohttp.ClientSession(
-        connector=connector
-    ) as session:
-        tasks = [
-            fetch_proxies(session, url)
-            for url in sources
-        ]
+    async with aiohttp.ClientSession(connector=connector) as session:
+        async with aiofiles.open("proxy.txt", "a") as file:
+            tasks = [
+                fetch_proxies(session, file, url)
+                for url in sources
+            ]
 
-        await asyncio.gather(*tasks)
+            await asyncio.gather(*tasks)
 
 
 if __name__ == "__main__":
@@ -84,11 +77,5 @@ if __name__ == "__main__":
 
     asyncio.run(main())
 
-    print(
-        f"\n[✓] File saved in proxy.txt "
-        f"({total_proxies} proxies)"
-    )
-    print(
-        f"[✓] Completed in "
-        f"{time.time() - start_time:.2f} seconds"
-    )
+    print(f"\n[✓] Added {total_proxies} proxies to proxy.txt")
+    print(f"[✓] Completed in {time.time() - start_time:.2f} seconds")
