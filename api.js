@@ -54,7 +54,7 @@ app.get('/attack', async (req, res) => {
     return res.status(400).json({ error: `Method ${method} is invalid.` });
   }
 
-  const proxyFile = 'valid_http.txt';
+  const proxyFile = 'proxy.txt';
   const concurrentsNum = Math.max(1, parseInt(concurrents || '1', 10) || 1);
   const totalAttackTime = Math.max(1, parseInt(time || '10', 10) || 10);
 
