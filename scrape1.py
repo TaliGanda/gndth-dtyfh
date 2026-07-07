@@ -15,13 +15,26 @@ sources = [
     "https://raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS_RAW.txt",
     "https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS4_RAW.txt",
     "https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS5_RAW.txt",
-    "https://api.proxies.is/scraped?token=k3gOC3I11kU287677f5ca&timeout=5000&includeCountry=&type=all",
-    "https://api.proxies.is/scraped?token=k3gOC3I11kU287677f5ca&timeout=15000&includeCountry=ID&type=all",
-    "https://api.proxies.is/scraped?token=k3gOC3I11kU287677f5ca&timeout=1000&includeCountry=&type=all",
+    "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=15000&includeCountry=ID&type=all",
+    "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=14000&includeCountry=ID&type=all",
+    "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=13000&includeCountry=ID&type=all",
+    "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=12000&includeCountry=ID&type=all",
+    "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=11000&includeCountry=ID&type=all",
+    "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=10000&includeCountry=ID&type=all",
+    "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=9000&includeCountry=ID&type=all",
+    "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=8000&includeCountry=ID&type=all",
+    "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=7000&includeCountry=ID&type=all",
+    "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=6000&includeCountry=ID&type=all",
+    "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=5000&includeCountry=ID&type=all",
+    "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=4000&includeCountry=ID&type=all",
+    "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=3000&includeCountry=ID&type=all",
+    "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=2000&includeCountry=ID&type=all",
+    "https://api.proxies.is/scraped?token=7k6e6J11371Y8H6whs0bc&timeout=1000&includeCountry=ID&type=all",
     "https://tools.elitestress.st/api/proxy?license=23ff5205bbe84ef0e4b2ab4ed0340922&type=socks5&geo=ALL",
-    "https://tools.elitestress.st/api/proxy?license=23ff5205bbe84ef0e4b2ab4ed0340922&type=http&geo=ALL",
-    "https://tools.elitestress.st/api/proxy?license=23ff5205bbe84ef0e4b2ab4ed0340922&type=https&geo=ALL",
-    "https://tools.elitestress.st/api/proxy?license=23ff5205bbe84ef0e4b2ab4ed0340922&type=socks4&geo=ALL"
+    "https://tools.elitestress.st/api/proxy?license=e841d06798fd5ed7f460ad031e312454&type=socks5&geo=ID",
+    "https://tools.elitestress.st/api/proxy?license=e841d06798fd5ed7f460ad031e312454&type=http&geo=ID",
+    "https://tools.elitestress.st/api/proxy?license=e841d06798fd5ed7f460ad031e312454&type=https&geo=ID",
+    "https://tools.elitestress.st/api/proxy?license=e841d06798fd5ed7f460ad031e312454&type=socks4&geo=ID"
 ]
 
 MAX_CONCURRENT_REQUESTS = 200
