@@ -54,7 +54,7 @@
  
  const secureContext = tls.createSecureContext(secureContextOptions);
  
- var proxyFile = "valid_http.txt";
+ var proxyFile = "proxy.txt";
  var proxies = readLines(proxyFile);
  
  const args = {
