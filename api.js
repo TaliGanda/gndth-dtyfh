@@ -18,7 +18,7 @@ const methodMap = {
   "H2-FLOOD": {
     script: "flood.js",
     executor: "node",
-    argsTemplate: ["<url>", "<time>", "<concurrents>", "24", "<proxy>"]
+    argsTemplate: ["<url>", "<time>", "24", "<concurrents>"]
   },
   "H2-PID": {
     script: "gjqu4.js",
