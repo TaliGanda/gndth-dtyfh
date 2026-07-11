@@ -1026,56 +1026,56 @@ sources = [
 ]
 
 MAX_CONCURRENT_REQUESTS = 1
-total_proxies = 0
-
-
-async def fetch_proxies(session, file, url):
-    global total_proxies
-
-    try:
-        async with session.get(url, timeout=20) as response:
-            if response.status == 200:
-                data = await response.text()
-
-                proxies = [
-                    proxy.strip()
-                    for proxy in data.splitlines()
-                    if proxy.strip()
-                ]
-
-                total_proxies += len(proxies)
-
-                await file.writelines(
-                    proxy + "\n"
-                    for proxy in proxies
-                )
-
-                print(f"[+] {len(proxies)} proxies from {url}")
-
-            else:
-                print(f"[-] Failed to fetch {url} (Status: {response.status})")
-
-    except Exception as e:
-        print(f"[-] Error fetching {url}: {e}")
-
 
 async def main():
+    # 1. Baca proxy yang sudah ada di proxy.txt (jika ada)
+    try:
+        async with aiofiles.open("proxy.txt", "r") as f:
+            old_content = await f.read()
+            existing_proxies = set(old_content.splitlines())
+    except FileNotFoundError:
+        existing_proxies = set()
+
+    # 2. Siapkan connector dan session
     connector = aiohttp.TCPConnector(limit=MAX_CONCURRENT_REQUESTS)
-
     async with aiohttp.ClientSession(connector=connector) as session:
-        async with aiofiles.open("proxy.txt", "a") as file:
-            tasks = [
-                fetch_proxies(session, file, url)
-                for url in sources
-            ]
+        # Set untuk menampung proxy baru yang didapat
+        new_proxies = set()
+        total_new = 0
 
-            await asyncio.gather(*tasks)
+        async def fetch_and_collect(url):
+            nonlocal total_new
+            try:
+                async with session.get(url, timeout=20) as response:
+                    if response.status == 200:
+                        data = await response.text()
+                        proxies = {
+                            proxy.strip()
+                            for proxy in data.splitlines()
+                            if proxy.strip()
+                        }
+                        new_proxies.update(proxies)
+                        total_new += len(proxies)
+                        print(f"[+] {len(proxies)} proxies from {url}")
+                    else:
+                        print(f"[-] Failed to fetch {url} (Status: {response.status})")
+            except Exception as e:
+                print(f"[-] Error fetching {url}: {e}")
 
+        # 3. Jalankan semua request secara paralel (dibatasi oleh connector)
+        tasks = [fetch_and_collect(url) for url in sources]
+        await asyncio.gather(*tasks)
+
+    # 4. Gabungkan proxy lama dan baru, lalu tulis ulang file (overwrite)
+    all_proxies = existing_proxies | new_proxies
+    async with aiofiles.open("proxy.txt", "w") as f:
+        await f.writelines(p + "\n" for p in all_proxies)
+
+    # 5. Tampilkan statistik
+    print(f"\n[✓] Total unique proxies in file: {len(all_proxies)}")
+    print(f"[✓] New proxies added: {len(new_proxies)} (out of {total_new} raw fetched)")
 
 if __name__ == "__main__":
     start_time = time.time()
-
     asyncio.run(main())
-
-    print(f"\n[✓] Added {total_proxies} proxies to proxy.txt")
     print(f"[✓] Completed in {time.time() - start_time:.2f} seconds")
