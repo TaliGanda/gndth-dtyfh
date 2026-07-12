@@ -20,10 +20,15 @@ const methodMap = {
     executor: "node",
     argsTemplate: ["<url>", "<time>", "24", "<concurrents>"]
   },
-  "H2-PID": {
-    script: "gjqu4.js",
+  "H2-LEOVO": {
+    script: "lev.js",
     executor: "node",
-    argsTemplate: ["GET", "<url>", "<time>", "<concurrents>", "32", "<proxy>"]
+    argsTemplate: ["<url>", "<time>", "24", "<concurrents>", "<proxy>"]
+  },
+  "H2-LEOVOG2": {
+    script: "levg3.js",
+    executor: "node",
+    argsTemplate: ["<url>", "<time>", "24", "<concurrents>", "<proxy>"]
   },
   "BYPASS": {
     script: "bypass.js",
