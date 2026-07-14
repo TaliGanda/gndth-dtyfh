@@ -4,7 +4,7 @@ import aiofiles
 import time
 
 sources = [
-"https://api.proxies.is/scraped?token=hWe00j187Kk47W1x08618&timeout=1000&includeCountry=ID&type=all",
+  "https://api.proxies.is/scraped?token=hWe00j187Kk47W1x08618&timeout=1000&includeCountry=ID&type=all",
   "https://api.proxies.is/scraped?token=hWe00j187Kk47W1x08618&timeout=2000&includeCountry=ID&type=all",
   "https://api.proxies.is/scraped?token=hWe00j187Kk47W1x08618&timeout=3000&includeCountry=ID&type=all",
   "https://api.proxies.is/scraped?token=hWe00j187Kk47W1x08618&timeout=4000&includeCountry=ID&type=all",
