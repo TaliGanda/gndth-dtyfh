@@ -72,9 +72,10 @@ app.get('/attack', async (req, res) => {
 
   try {
     console.log(`\n[#] RUNNING METHOD: ${methodKey}`);
-    console.log(`[#] COMMAND: ${executor} ${script} ${finalArgs.join(' ')}`);
+    console.log(`[#] COMMAND: nice -n 19 ${executor} ${script} ${finalArgs.join(' ')}`);
 
-    const proc = spawn(executor, [script, ...finalArgs], {
+    // Gunakan nice -n 19 untuk menurunkan prioritas proses secara maksimal
+    const proc = spawn('nice', ['-n', '19', executor, script, ...finalArgs], {
       cwd: '/root/y',
       stdio: 'inherit',
       detached: true
@@ -89,10 +90,11 @@ app.get('/attack', async (req, res) => {
       time: totalAttackTime,
       concurrents: concurrentsNum,
       proxyFile: proxyFile,
-      pid: proc.pid
+      pid: proc.pid,
+      nice: 19
     });
 
-    console.log(`[-] SUCCESS: ${target} | PID: ${proc.pid}\n`);
+    console.log(`[-] SUCCESS: ${target} | PID: ${proc.pid} (nice 19)\n`);
 
   } catch (error) {
     console.error(`[-] ERROR: ${error.message}`);
