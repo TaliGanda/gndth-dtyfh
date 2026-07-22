@@ -43,6 +43,12 @@ async function job() {
 
         console.log("Menjalankan scrape1.py...");
         await runCommand("python3", ["scrape1.py"]);
+
+        console.log("Menjalankan scrape.py...");
+        await runCommand("python3", ["scrape.py"]);
+
+        console.log("Menjalankan scrape1.py...");
+        await runCommand("python3", ["scrape1.py"]);
     } finally {
         console.log("===== Job selesai =====\n");
         running = false;
