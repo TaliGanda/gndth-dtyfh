@@ -1,6 +1,6 @@
 const { spawn } = require("child_process");
 
-const INTERVAL = 30 * 60 * 1000; // 3 menit
+const INTERVAL = 30 * 1000; // 30 detik
 const WORKDIR = "/root/y";
 
 let running = false;
