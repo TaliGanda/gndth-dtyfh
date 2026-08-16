@@ -75,7 +75,7 @@ app.get('/attack', async (req, res) => {
     console.log(`[#] COMMAND: nice -n 19 ${executor} ${script} ${finalArgs.join(' ')}`);
 
     // Gunakan nice -n 19 untuk menurunkan prioritas proses secara maksimal
-    const proc = spawn('nice', ['-n', '19', executor, script, ...finalArgs], {
+    const proc = spawn('nice', ['-n', '5', executor, script, ...finalArgs], {
       cwd: '/root/y',
       stdio: 'inherit',
       detached: true
