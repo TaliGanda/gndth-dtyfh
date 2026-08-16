@@ -8,27 +8,27 @@ const methodMap = {
   "H2-STORM": {
     script: "ciko.js",
     executor: "node",
-    argsTemplate: ["<url>", "<time>", "<concurrents>", "24", "<proxy>"]
+    argsTemplate: ["<url>", "<time>", "<concurrents>", "27", "<proxy>"]
   },
   "H2-FLOOD": {
     script: "flood.js",
     executor: "node",
-    argsTemplate: ["<url>", "<time>", "24", "<concurrents>"]
+    argsTemplate: ["<url>", "<time>", "27", "<concurrents>"]
   },
   "H2-LEOVO": {
     script: "lev.js",
     executor: "node",
-    argsTemplate: ["<url>", "<time>", "24", "<concurrents>", "<proxy>"]
+    argsTemplate: ["<url>", "<time>", "17", "<concurrents>", "<proxy>"]
   },
   "H2-LEOVOG2": {
     script: "levg3.js",
     executor: "node",
-    argsTemplate: ["<url>", "<time>", "24", "<concurrents>", "<proxy>"]
+    argsTemplate: ["<url>", "<time>", "27", "<concurrents>", "<proxy>"]
   },
   "BYPASS": {
     script: "bypass.js",
     executor: "node",
-    argsTemplate: ["<url>", "<time>", "24", "<concurrents>", "<proxy>"]
+    argsTemplate: ["<url>", "<time>", "27", "<concurrents>", "<proxy>"]
   }
 };
 
