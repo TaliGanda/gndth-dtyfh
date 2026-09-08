@@ -29,6 +29,11 @@ const methodMap = {
     script: "bypass.js",
     executor: "node",
     argsTemplate: ["<url>", "<time>", "27", "<concurrents>", "<proxy>"]
+  },
+  "BROWSERN": {
+    script: "browsern.py",
+    executor: "python3",
+    argsTemplate: ["<url>", "<time>", "<threads>", "<concurrents>", "--browser", "8", "--randrate", "true", "--http 2", "--emulation", "true", "--optimize", "true"]
   }
 };
 
