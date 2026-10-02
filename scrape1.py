@@ -4,7 +4,7 @@ import aiofiles
 import time
 
 sources = [
-"https://proxyspace.pro/http.txt",
+    "https://proxyspace.pro/http.txt",
     "https://proxyspace.pro/https.txt",
     "https://proxyspace.pro/socks4.txt",
     "https://proxyspace.pro/socks5.txt",
